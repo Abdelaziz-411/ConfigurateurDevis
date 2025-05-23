@@ -8,42 +8,70 @@ $message = '';
 // Traitement du formulaire
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
+        error_log("Action reçue : " . $_POST['action']);
+        
         if ($_POST['action'] === 'add' || $_POST['action'] === 'edit') {
             $nom = $_POST['nom'];
             $description = $_POST['description'];
+            error_log("Nom : " . $nom);
+            error_log("Description : " . $description);
             
             if ($_POST['action'] === 'add') {
-                $stmt = $pdo->prepare("INSERT INTO kits (nom, description) VALUES (?, ?)");
-                $stmt->execute([$nom, $description]);
-                $id = $pdo->lastInsertId();
-                
-                // Ajouter les compatibilités avec les véhicules
-                foreach ($_POST['vehicules'] as $vehicule_id) {
-                    $prix = $_POST['prix_' . $vehicule_id];
-                    $stmt = $pdo->prepare("INSERT INTO kit_vehicule_compatibilite (id_kit, id_vehicule, prix) VALUES (?, ?, ?)");
-                    $stmt->execute([$id, $vehicule_id, $prix]);
-                }
-                
-                // Gestion des images
-                if (!empty($_FILES['images']['name'][0])) {
-                    foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) {
-                        $file = $_FILES['images']['name'][$key];
-                        $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                try {
+                    if (empty($_POST['vehicules']) || !is_array($_POST['vehicules'])) {
+                        throw new Exception("Veuillez sélectionner au moins un véhicule compatible");
+                    }
+
+                    // Insérer le kit avec un prix par défaut de 0
+                    $stmt = $pdo->prepare("INSERT INTO kits (nom, description, prix) VALUES (?, ?, 0.00)");
+                    $stmt->execute([$nom, $description]);
+                    $id = $pdo->lastInsertId();
+                    
+                    // Ajouter les compatibilités avec les véhicules
+                    foreach ($_POST['vehicules'] as $vehicule_id) {
+                        $prix_key = 'prix_' . $vehicule_id;
                         
-                        if (in_array($ext, ['jpg', 'jpeg', 'png'])) {
-                            $filename = uniqid() . '.' . $ext;
-                            $path = '../images/kits/' . $filename;
+                        // Vérifier si le prix est défini et le convertir en nombre
+                        $prix = 0.00; // Valeur par défaut
+                        if (isset($_POST[$prix_key]) && $_POST[$prix_key] !== '') {
+                            $prix = str_replace(',', '.', $_POST[$prix_key]); // Remplacer la virgule par un point
+                            $prix = floatval($prix);
+                        }
+
+                        // Insérer avec une requête préparée
+                        $stmt = $pdo->prepare("INSERT INTO kit_vehicule_compatibilite (id_kit, id_vehicule, prix) VALUES (:id_kit, :id_vehicule, :prix)");
+                        $stmt->execute([
+                            ':id_kit' => $id,
+                            ':id_vehicule' => $vehicule_id,
+                            ':prix' => $prix
+                        ]);
+                    }
+                    
+                    // Gestion des images
+                    if (!empty($_FILES['images']['name'][0])) {
+                        foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) {
+                            $file = $_FILES['images']['name'][$key];
+                            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
                             
-                            if (move_uploaded_file($tmp_name, $path)) {
-                                $stmt = $pdo->prepare("INSERT INTO kit_images (id_kit, image_path) VALUES (?, ?)");
-                                $stmt->execute([$id, $filename]);
+                            if (in_array($ext, ['jpg', 'jpeg', 'png'])) {
+                                $filename = uniqid() . '.' . $ext;
+                                $path = '../images/kits/' . $filename;
+                                
+                                if (move_uploaded_file($tmp_name, $path)) {
+                                    $stmt = $pdo->prepare("INSERT INTO kit_images (id_kit, image_path) VALUES (?, ?)");
+                                    $stmt->execute([$id, $filename]);
+                                }
                             }
                         }
                     }
+                    
+                    header('Location: kits.php?success=add');
+                    exit;
+                } catch (PDOException $e) {
+                    die("Une erreur est survenue lors de l'ajout du kit : " . $e->getMessage());
+                } catch (Exception $e) {
+                    die("Une erreur est survenue : " . $e->getMessage());
                 }
-                
-                header('Location: kits.php?success=add');
-                exit;
             } else {
                 $id = $_POST['id'];
                 $stmt = $pdo->prepare("UPDATE kits SET nom = ?, description = ? WHERE id = ?");
@@ -56,9 +84,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Puis ajouter les nouvelles
                 foreach ($_POST['vehicules'] as $vehicule_id) {
-                    $prix = $_POST['prix_' . $vehicule_id];
-                    $stmt = $pdo->prepare("INSERT INTO kit_vehicule_compatibilite (id_kit, id_vehicule, prix) VALUES (?, ?, ?)");
-                    $stmt->execute([$id, $vehicule_id, $prix]);
+                    $prix_key = 'prix_' . $vehicule_id;
+                    error_log("Recherche du prix pour la clé : " . $prix_key);
+                    
+                    // Vérifier si le prix est défini et le convertir en nombre
+                    if (isset($_POST[$prix_key])) {
+                        $prix = str_replace(',', '.', $_POST[$prix_key]); // Remplacer la virgule par un point
+                        $prix = floatval($prix);
+                        error_log("Prix trouvé et converti : " . $prix);
+                    } else {
+                        $prix = 0.00;
+                        error_log("Prix non trouvé, utilisation de la valeur par défaut : 0.00");
+                    }
+
+                    // Insérer avec une requête préparée
+                    $stmt = $pdo->prepare("INSERT INTO kit_vehicule_compatibilite (id_kit, id_vehicule, prix) VALUES (:id_kit, :id_vehicule, :prix)");
+                    $stmt->execute([
+                        ':id_kit' => $id,
+                        ':id_vehicule' => $vehicule_id,
+                        ':prix' => $prix
+                    ]);
+                    error_log("Insertion réussie pour le véhicule " . $vehicule_id);
                 }
                 
                 // Gestion des images
@@ -330,40 +376,75 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
     <?php endif; ?>
 <?php else: ?>
     <div class="table-responsive">
-        <table class="table table-striped">
+        <table class="table table-striped align-middle">
             <thead>
                 <tr>
-                    <th>Nom</th>
-                    <th>Description</th>
-                    <th>Véhicules compatibles</th>
-                    <th>Images</th>
-                    <th>Actions</th>
+                    <th style="width: 15%">Nom</th>
+                    <th style="width: 35%">Description</th>
+                    <th style="width: 25%">Véhicules compatibles</th>
+                    <th style="width: 15%">Images</th>
+                    <th style="width: 10%">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($kits as $kit): ?>
                 <tr>
-                    <td><?= htmlspecialchars($kit['nom']) ?></td>
-                    <td><?= htmlspecialchars($kit['description']) ?></td>
+                    <td class="fw-bold"><?= htmlspecialchars($kit['nom']) ?></td>
+                    <td>
+                        <div class="description-cell" style="max-height: 100px; overflow-y: auto;">
+                            <?php 
+                            $description = htmlspecialchars($kit['description']);
+                            if (strlen($description) > 200) {
+                                echo substr($description, 0, 200) . '... ';
+                                echo '<a href="#" class="text-primary show-more" data-bs-toggle="modal" data-bs-target="#descriptionModal' . $kit['id'] . '">Voir plus</a>';
+                            } else {
+                                echo $description;
+                            }
+                            ?>
+                        </div>
+                        <?php if (strlen($description) > 200): ?>
+                        <!-- Modal pour la description complète -->
+                        <div class="modal fade" id="descriptionModal<?= $kit['id'] ?>" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Description complète - <?= htmlspecialchars($kit['nom']) ?></h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <?= nl2br($description) ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                    </td>
                     <td>
                         <?php if (!empty($kit['vehicules_prix'])): ?>
-                            <ul class="list-unstyled mb-0">
-                                <?php foreach ($kit['vehicules_prix'] as $vehicule => $prix): ?>
-                                    <li><?= htmlspecialchars($vehicule) ?> : <?= number_format($prix, 2, ',', ' ') ?> €</li>
-                                <?php endforeach; ?>
-                            </ul>
+                            <div class="vehicules-list" style="max-height: 100px; overflow-y: auto;">
+                                <ul class="list-unstyled mb-0">
+                                    <?php foreach ($kit['vehicules_prix'] as $vehicule => $prix): ?>
+                                        <li>
+                                            <span class="fw-medium"><?= htmlspecialchars($vehicule) ?></span>
+                                            <span class="text-success"><?= number_format($prix, 2, ',', ' ') ?> €</span>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
                         <?php else: ?>
                             <span class="text-muted">Aucun véhicule</span>
                         <?php endif; ?>
                     </td>
                     <td>
                         <?php if (!empty($kit['images'])): ?>
-                            <div class="d-flex gap-1">
+                            <div class="d-flex gap-1 flex-wrap">
                                 <?php foreach (array_slice($kit['images'], 0, 3) as $image): ?>
-                                    <img src="../images/kits/<?= $image ?>" class="img-thumbnail" style="height: 50px;">
+                                    <a href="../images/kits/<?= $image ?>" target="_blank">
+                                        <img src="../images/kits/<?= $image ?>" class="img-thumbnail" style="height: 50px; width: 50px; object-fit: cover;">
+                                    </a>
                                 <?php endforeach; ?>
                                 <?php if (count($kit['images']) > 3): ?>
-                                    <span class="badge bg-secondary">+<?= count($kit['images']) - 3 ?></span>
+                                    <span class="badge bg-secondary align-self-center">+<?= count($kit['images']) - 3 ?></span>
                                 <?php endif; ?>
                             </div>
                         <?php else: ?>
@@ -372,10 +453,10 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
                     </td>
                     <td>
                         <div class="btn-group">
-                            <a href="?action=edit&id=<?= $kit['id'] ?>" class="btn btn-sm btn-primary">
+                            <a href="?action=edit&id=<?= $kit['id'] ?>" class="btn btn-sm btn-primary" title="Modifier">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <button type="button" class="btn btn-sm btn-danger" 
+                            <button type="button" class="btn btn-sm btn-danger" title="Supprimer"
                                     onclick="if(confirm('Êtes-vous sûr de vouloir supprimer ce kit ?')) { 
                                         document.getElementById('delete-form-<?= $kit['id'] ?>').submit(); 
                                     }">
@@ -392,6 +473,43 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
             </tbody>
         </table>
     </div>
+
+<style>
+.description-cell {
+    line-height: 1.4;
+    text-align: justify;
+}
+
+.vehicules-list {
+    font-size: 0.9rem;
+}
+
+.vehicules-list li {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+    padding: 0.25rem;
+    border-bottom: 1px solid #eee;
+}
+
+.vehicules-list li:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.table td {
+    vertical-align: middle;
+    padding: 1rem 0.75rem;
+}
+
+.img-thumbnail {
+    transition: transform 0.2s;
+}
+
+.img-thumbnail:hover {
+    transform: scale(1.1);
+}
+</style>
 <?php endif; ?>
 
 <script>
@@ -403,13 +521,30 @@ function togglePrixInput(checkbox) {
         prixInput.style.display = 'flex';
         prixInputField.disabled = false;
         prixInputField.required = true;
+        if (!prixInputField.value || prixInputField.value === '') {
+            prixInputField.value = '0.00';
+        }
     } else {
         prixInput.style.display = 'none';
         prixInputField.disabled = true;
         prixInputField.required = false;
-        prixInputField.value = '';
+        prixInputField.value = '0.00';
     }
 }
+
+// Initialiser les champs de prix au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.vehicule-check').forEach(checkbox => {
+        const prixInput = checkbox.closest('.col-md-6').querySelector('.prix-input');
+        const prixInputField = prixInput.querySelector('input');
+        if (!prixInputField.value || prixInputField.value === '') {
+            prixInputField.value = '0.00';
+        }
+        if (checkbox.checked) {
+            togglePrixInput(checkbox);
+        }
+    });
+});
 
 document.querySelectorAll('.delete-image').forEach(button => {
     button.addEventListener('click', function() {

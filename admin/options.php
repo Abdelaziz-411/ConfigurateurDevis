@@ -1,7 +1,6 @@
 <?php
-require 'check_auth.php';
-require '../config.php';
 require 'header.php';
+require 'check_auth.php';
 
 $action = $_GET['action'] ?? 'list';
 $id = $_GET['id'] ?? null;
@@ -15,37 +14,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $description = $_POST['description'];
             
             if ($_POST['action'] === 'add') {
-                $stmt = $pdo->prepare("INSERT INTO options (nom, description) VALUES (?, ?)");
-                $stmt->execute([$nom, $description]);
-                $id = $pdo->lastInsertId();
-                
-                // Ajouter les compatibilités avec les véhicules
-                foreach ($_POST['vehicules'] as $vehicule_id) {
-                    $prix = $_POST['prix_' . $vehicule_id];
-                    $stmt = $pdo->prepare("INSERT INTO option_vehicule_compatibilite (id_option, id_vehicule, prix) VALUES (?, ?, ?)");
-                    $stmt->execute([$id, $vehicule_id, $prix]);
-                }
-                
-                // Gestion des images
-                if (!empty($_FILES['images']['name'][0])) {
-                    foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) {
-                        $file = $_FILES['images']['name'][$key];
-                        $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                try {
+                    if (empty($_POST['vehicules']) || !is_array($_POST['vehicules'])) {
+                        throw new Exception("Veuillez sélectionner au moins un véhicule compatible");
+                    }
+
+                    // Insérer l'option avec un prix par défaut de 0
+                    $stmt = $pdo->prepare("INSERT INTO options (nom, description, prix) VALUES (?, ?, 0.00)");
+                    $stmt->execute([$nom, $description]);
+                    $id = $pdo->lastInsertId();
+                    
+                    // Ajouter les compatibilités avec les véhicules
+                    foreach ($_POST['vehicules'] as $vehicule_id) {
+                        $prix_key = 'prix_' . $vehicule_id;
                         
-                        if (in_array($ext, ['jpg', 'jpeg', 'png'])) {
-                            $filename = uniqid() . '.' . $ext;
-                            $path = '../images/options/' . $filename;
+                        // Vérifier si le prix est défini et le convertir en nombre
+                        $prix = 0.00; // Valeur par défaut
+                        if (isset($_POST[$prix_key]) && $_POST[$prix_key] !== '') {
+                            $prix = str_replace(',', '.', $_POST[$prix_key]); // Remplacer la virgule par un point
+                            $prix = floatval($prix);
+                        }
+
+                        // Insérer avec une requête préparée
+                        $stmt = $pdo->prepare("INSERT INTO option_vehicule_compatibilite (id_option, id_vehicule, prix) VALUES (:id_option, :id_vehicule, :prix)");
+                        $stmt->execute([
+                            ':id_option' => $id,
+                            ':id_vehicule' => $vehicule_id,
+                            ':prix' => $prix
+                        ]);
+                    }
+                    
+                    // Gestion des images
+                    if (!empty($_FILES['images']['name'][0])) {
+                        foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) {
+                            $file = $_FILES['images']['name'][$key];
+                            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
                             
-                            if (move_uploaded_file($tmp_name, $path)) {
-                                $stmt = $pdo->prepare("INSERT INTO option_images (id_option, image_path) VALUES (?, ?)");
-                                $stmt->execute([$id, $filename]);
+                            if (in_array($ext, ['jpg', 'jpeg', 'png'])) {
+                                $filename = uniqid() . '.' . $ext;
+                                $path = '../images/options/' . $filename;
+                                
+                                if (move_uploaded_file($tmp_name, $path)) {
+                                    $stmt = $pdo->prepare("INSERT INTO option_images (id_option, image_path) VALUES (?, ?)");
+                                    $stmt->execute([$id, $filename]);
+                                }
                             }
                         }
                     }
+                    
+                    header('Location: options.php?success=add');
+                    exit;
+                } catch (PDOException $e) {
+                    die("Une erreur est survenue lors de l'ajout de l'option : " . $e->getMessage());
+                } catch (Exception $e) {
+                    die("Une erreur est survenue : " . $e->getMessage());
                 }
-                
-                header('Location: options.php?success=add');
-                exit;
             } else {
                 $id = $_POST['id'];
                 $stmt = $pdo->prepare("UPDATE options SET nom = ?, description = ? WHERE id = ?");
@@ -332,40 +355,75 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
     <?php endif; ?>
 <?php else: ?>
     <div class="table-responsive">
-        <table class="table table-striped">
+        <table class="table table-striped align-middle">
             <thead>
                 <tr>
-                    <th>Nom</th>
-                    <th>Description</th>
-                    <th>Véhicules compatibles</th>
-                    <th>Images</th>
-                    <th>Actions</th>
+                    <th style="width: 15%">Nom</th>
+                    <th style="width: 35%">Description</th>
+                    <th style="width: 25%">Véhicules compatibles</th>
+                    <th style="width: 15%">Images</th>
+                    <th style="width: 10%">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($options as $option): ?>
                 <tr>
-                    <td><?= htmlspecialchars($option['nom']) ?></td>
-                    <td><?= htmlspecialchars($option['description']) ?></td>
+                    <td class="fw-bold"><?= htmlspecialchars($option['nom']) ?></td>
+                    <td>
+                        <div class="description-cell" style="max-height: 100px; overflow-y: auto;">
+                            <?php 
+                            $description = htmlspecialchars($option['description']);
+                            if (strlen($description) > 200) {
+                                echo substr($description, 0, 200) . '... ';
+                                echo '<a href="#" class="text-primary show-more" data-bs-toggle="modal" data-bs-target="#descriptionModal' . $option['id'] . '">Voir plus</a>';
+                            } else {
+                                echo $description;
+                            }
+                            ?>
+                        </div>
+                        <?php if (strlen($description) > 200): ?>
+                        <!-- Modal pour la description complète -->
+                        <div class="modal fade" id="descriptionModal<?= $option['id'] ?>" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Description complète - <?= htmlspecialchars($option['nom']) ?></h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <?= nl2br($description) ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                    </td>
                     <td>
                         <?php if (!empty($option['vehicules_prix'])): ?>
-                            <ul class="list-unstyled mb-0">
-                                <?php foreach ($option['vehicules_prix'] as $vehicule => $prix): ?>
-                                    <li><?= htmlspecialchars($vehicule) ?> : <?= number_format($prix, 2, ',', ' ') ?> €</li>
-                                <?php endforeach; ?>
-                            </ul>
+                            <div class="vehicules-list" style="max-height: 100px; overflow-y: auto;">
+                                <ul class="list-unstyled mb-0">
+                                    <?php foreach ($option['vehicules_prix'] as $vehicule => $prix): ?>
+                                        <li>
+                                            <span class="fw-medium"><?= htmlspecialchars($vehicule) ?></span>
+                                            <span class="text-success"><?= number_format($prix, 2, ',', ' ') ?> €</span>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
                         <?php else: ?>
                             <span class="text-muted">Aucun véhicule</span>
                         <?php endif; ?>
                     </td>
                     <td>
                         <?php if (!empty($option['images'])): ?>
-                            <div class="d-flex gap-1">
+                            <div class="d-flex gap-1 flex-wrap">
                                 <?php foreach (array_slice($option['images'], 0, 3) as $image): ?>
-                                    <img src="../images/options/<?= $image ?>" class="img-thumbnail" style="height: 50px;">
+                                    <a href="../images/options/<?= $image ?>" target="_blank">
+                                        <img src="../images/options/<?= $image ?>" class="img-thumbnail" style="height: 50px; width: 50px; object-fit: cover;">
+                                    </a>
                                 <?php endforeach; ?>
                                 <?php if (count($option['images']) > 3): ?>
-                                    <span class="badge bg-secondary">+<?= count($option['images']) - 3 ?></span>
+                                    <span class="badge bg-secondary align-self-center">+<?= count($option['images']) - 3 ?></span>
                                 <?php endif; ?>
                             </div>
                         <?php else: ?>
@@ -374,10 +432,10 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
                     </td>
                     <td>
                         <div class="btn-group">
-                            <a href="?action=edit&id=<?= $option['id'] ?>" class="btn btn-sm btn-primary">
+                            <a href="?action=edit&id=<?= $option['id'] ?>" class="btn btn-sm btn-primary" title="Modifier">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <button type="button" class="btn btn-sm btn-danger" 
+                            <button type="button" class="btn btn-sm btn-danger" title="Supprimer"
                                     onclick="if(confirm('Êtes-vous sûr de vouloir supprimer cette option ?')) { 
                                         document.getElementById('delete-form-<?= $option['id'] ?>').submit(); 
                                     }">
@@ -394,7 +452,43 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
             </tbody>
         </table>
     </div>
-<?php endif; ?>
+
+<style>
+.description-cell {
+    line-height: 1.4;
+    text-align: justify;
+}
+
+.vehicules-list {
+    font-size: 0.9rem;
+}
+
+.vehicules-list li {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+    padding: 0.25rem;
+    border-bottom: 1px solid #eee;
+}
+
+.vehicules-list li:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.table td {
+    vertical-align: middle;
+    padding: 1rem 0.75rem;
+}
+
+.img-thumbnail {
+    transition: transform 0.2s;
+}
+
+.img-thumbnail:hover {
+    transform: scale(1.1);
+}
+</style>
 
 <script>
 function togglePrixInput(checkbox) {
@@ -443,4 +537,5 @@ document.querySelectorAll('.delete-image').forEach(button => {
 });
 </script>
 
+<?php endif; ?>
 <?php require 'footer.php'; ?> 

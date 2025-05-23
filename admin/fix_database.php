@@ -55,63 +55,98 @@ try {
         FOREIGN KEY (id_vehicule) REFERENCES vehicules(id) ON DELETE CASCADE
     )");
 
-    // 6. Vérifier/Créer la table des kits
-    $pdo->exec("CREATE TABLE IF NOT EXISTS kits (
+    // 7. Vérifier/Créer la table des kits - Supprimer d'abord toutes les tables dépendantes
+    $pdo->exec("SET FOREIGN_KEY_CHECKS = 0"); // Désactiver temporairement la vérification des clés étrangères
+    
+    // Supprimer toutes les tables liées aux kits
+    $pdo->exec("DROP TABLE IF EXISTS kit_vehicule_compatibilite");
+    $pdo->exec("DROP TABLE IF EXISTS kit_vehicule_prix");
+    $pdo->exec("DROP TABLE IF EXISTS kit_options");
+    $pdo->exec("DROP TABLE IF EXISTS kit_images");
+    $pdo->exec("DROP TABLE IF EXISTS kits");
+    
+    $pdo->exec("SET FOREIGN_KEY_CHECKS = 1"); // Réactiver la vérification des clés étrangères
+    
+    // Recréer la table kits
+    $pdo->exec("CREATE TABLE kits (
         id INT AUTO_INCREMENT PRIMARY KEY,
         nom VARCHAR(255) NOT NULL,
         description TEXT,
+        prix DECIMAL(10,2) NOT NULL DEFAULT 0.00,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
 
-    // 7. Vérifier/Créer la table des images de kits
-    $pdo->exec("CREATE TABLE IF NOT EXISTS kit_images (
+    // 8. Vérifier/Créer la table des images de kits
+    $pdo->exec("CREATE TABLE kit_images (
         id INT AUTO_INCREMENT PRIMARY KEY,
         id_kit INT NOT NULL,
         image_path VARCHAR(255) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (id_kit) REFERENCES kits(id) ON DELETE CASCADE
-    )");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
 
-    // 8. Vérifier/Créer la table de compatibilité kit-véhicule
-    $pdo->exec("CREATE TABLE IF NOT EXISTS kit_vehicule_compatibilite (
+    // 9. Vérifier/Créer la table de compatibilité kit-véhicule
+    $pdo->exec("CREATE TABLE kit_vehicule_compatibilite (
         id INT AUTO_INCREMENT PRIMARY KEY,
         id_kit INT NOT NULL,
         id_vehicule INT NOT NULL,
-        prix DECIMAL(10,2) NOT NULL,
+        prix DECIMAL(10,2) NOT NULL DEFAULT 0.00,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (id_kit) REFERENCES kits(id) ON DELETE CASCADE,
         FOREIGN KEY (id_vehicule) REFERENCES vehicules(id) ON DELETE CASCADE,
         UNIQUE KEY unique_kit_vehicule (id_kit, id_vehicule)
-    )");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
 
-    // 9. Vérifier/Créer la table des options
-    $pdo->exec("CREATE TABLE IF NOT EXISTS options (
+    // 10. Vérifier/Créer la table de liaison kit-options si nécessaire
+    $pdo->exec("CREATE TABLE kit_options (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        id_kit INT NOT NULL,
+        id_option INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (id_kit) REFERENCES kits(id) ON DELETE CASCADE,
+        FOREIGN KEY (id_option) REFERENCES options(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_kit_option (id_kit, id_option)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+    // 11. Vérifier/Créer la table des options
+    $pdo->exec("SET FOREIGN_KEY_CHECKS = 0"); // Désactiver temporairement la vérification des clés étrangères
+    
+    // Supprimer toutes les tables liées aux options
+    $pdo->exec("DROP TABLE IF EXISTS option_vehicule_compatibilite");
+    $pdo->exec("DROP TABLE IF EXISTS option_images");
+    $pdo->exec("DROP TABLE IF EXISTS options");
+    
+    $pdo->exec("SET FOREIGN_KEY_CHECKS = 1"); // Réactiver la vérification des clés étrangères
+    
+    // Recréer la table options
+    $pdo->exec("CREATE TABLE options (
         id INT AUTO_INCREMENT PRIMARY KEY,
         nom VARCHAR(255) NOT NULL,
         description TEXT,
+        prix DECIMAL(10,2) NOT NULL DEFAULT 0.00,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
 
-    // 10. Vérifier/Créer la table des images d'options
-    $pdo->exec("CREATE TABLE IF NOT EXISTS option_images (
+    // 12. Vérifier/Créer la table des images d'options
+    $pdo->exec("CREATE TABLE option_images (
         id INT AUTO_INCREMENT PRIMARY KEY,
         id_option INT NOT NULL,
         image_path VARCHAR(255) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (id_option) REFERENCES options(id) ON DELETE CASCADE
-    )");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
 
-    // 11. Vérifier/Créer la table de compatibilité option-véhicule
-    $pdo->exec("CREATE TABLE IF NOT EXISTS option_vehicule_compatibilite (
+    // 13. Vérifier/Créer la table de compatibilité option-véhicule
+    $pdo->exec("CREATE TABLE option_vehicule_compatibilite (
         id INT AUTO_INCREMENT PRIMARY KEY,
         id_option INT NOT NULL,
         id_vehicule INT NOT NULL,
-        prix DECIMAL(10,2) NOT NULL,
+        prix DECIMAL(10,2) NOT NULL DEFAULT 0.00,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (id_option) REFERENCES options(id) ON DELETE CASCADE,
         FOREIGN KEY (id_vehicule) REFERENCES vehicules(id) ON DELETE CASCADE,
         UNIQUE KEY unique_option_vehicule (id_option, id_vehicule)
-    )");
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
 
     // Créer les dossiers d'images s'ils n'existent pas
     $directories = ['vehicules', 'kits', 'options'];

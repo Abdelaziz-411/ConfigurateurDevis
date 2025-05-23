@@ -21,25 +21,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Vérifier le mot de passe
         if ($utilisateur && password_verify($mot_de_passe, $utilisateur['mot_de_passe'])) {
-            if ($utilisateur['statut'] === 'actif') {
-                // Connexion réussie
-                $_SESSION['utilisateur_id'] = $utilisateur['id'];
-                $_SESSION['utilisateur_nom'] = $utilisateur['nom'];
-                $_SESSION['email'] = $utilisateur['email'];
-                $_SESSION['user_statut'] = $utilisateur['statut'];
-                $_SESSION['role'] = $utilisateur['role'];
+            // Connexion réussie
+            $_SESSION['utilisateur_id'] = $utilisateur['id'];
+            $_SESSION['utilisateur_nom'] = $utilisateur['nom'];
+            $_SESSION['email'] = $utilisateur['email'];
+            $_SESSION['user_statut'] = $utilisateur['statut'];
+            $_SESSION['role'] = $utilisateur['role'];
 
-                // Rediriger selon le rôle
-                if ($utilisateur['role'] === 'admin') {
-                    header('Location: index.php');
-                } else {
-                    $_SESSION['error'] = "Vous n'avez pas les droits d'accès à l'administration.";
-                    header('Location: ../index.php');
-                }
-                exit();
+            // Rediriger selon le rôle et le statut
+            if ($utilisateur['role'] === 'admin' && $utilisateur['statut'] === 'actif') {
+                header('Location: index.php');
             } else {
-                $_SESSION['error'] = "Votre compte n'est pas actif. Contactez l'administrateur.";
+                $_SESSION['error'] = "Vous n'avez pas les droits d'accès à l'administration.";
+                header('Location: login.php');
             }
+            exit();
         } else {
             $_SESSION['error'] = "Email ou mot de passe incorrect.";
         }
