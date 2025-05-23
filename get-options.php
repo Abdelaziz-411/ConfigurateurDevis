@@ -10,24 +10,24 @@ if (!isset($_GET['vehicule_id'])) {
 $vehicule_id = (int)$_GET['vehicule_id'];
 
 try {
-    // Récupérer uniquement les options compatibles avec le véhicule sélectionné
-    $stmt = $pdo->prepare("
-        SELECT o.id, o.nom, o.description, ovc.prix, 
+    // Récupérer les options compatibles avec le véhicule
+    $sql = "
+        SELECT DISTINCT o.id, o.nom, o.description, ovc.prix, 
         GROUP_CONCAT(DISTINCT CONCAT('images/options/', oi.image_path)) as images
         FROM options o
         INNER JOIN option_vehicule_compatibilite ovc ON o.id = ovc.id_option AND ovc.id_vehicule = ?
         LEFT JOIN option_images oi ON o.id = oi.id_option
         GROUP BY o.id, o.nom, o.description, ovc.prix
         ORDER BY o.nom
-    ");
+    ";
     
+    $stmt = $pdo->prepare($sql);
     $stmt->execute([$vehicule_id]);
     $options = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Transformer la chaîne d'images en tableau
+    // Transformer la chaîne d'images en tableau et formater les données
     foreach ($options as &$option) {
         $option['images'] = $option['images'] ? explode(',', $option['images']) : [];
-        // Le prix ne peut pas être null car on utilise INNER JOIN
         $option['prix'] = floatval($option['prix']);
     }
     

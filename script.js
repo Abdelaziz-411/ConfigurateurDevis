@@ -342,10 +342,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Modifier la fonction loadOptions pour gérer la réinitialisation
+    // Modifier la fonction loadOptions pour inclure l'ID du kit
     async function loadOptions(vehiculeId) {
         try {
-            const response = await fetch(`get-options.php?vehicule_id=${vehiculeId}`);
+            const url = new URL('get-options.php', window.location.href);
+            url.searchParams.append('vehicule_id', vehiculeId);
+
+            const response = await fetch(url.toString());
             const data = await response.json();
             
             if (!optionsContainer) return;
@@ -353,13 +356,19 @@ document.addEventListener('DOMContentLoaded', function() {
             // Vérifier si data existe et contient la propriété success
             if (data && data.success && data.options) {
                 optionsContainer.innerHTML = '';
+                
                 if (data.options.length > 0) {
+                    const row = document.createElement('div');
+                    row.className = 'row g-4';
+                    
                     data.options.forEach(option => {
-                        if (option && option.id) { // Vérifier que l'option est valide
+                        if (option && option.id) {
                             const optionCard = createOptionCard(option);
-                            optionsContainer.appendChild(optionCard);
+                            row.appendChild(optionCard);
                         }
                     });
+                    
+                    optionsContainer.appendChild(row);
                 } else {
                     optionsContainer.innerHTML = '<div class="col-12"><div class="alert alert-info">Aucune option disponible pour ce véhicule.</div></div>';
                 }
@@ -377,25 +386,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Créer une carte de kit
     function createKitCard(kit) {
-        const col = document.createElement('div');
-        col.className = 'col-md-6 col-lg-4';
+        const card = document.createElement('div');
+        card.className = 'col-md-6 col-lg-4';
         
-        // Vérifier et formater le prix
-        const prix = parseFloat(kit.prix);
-        const prixFormate = !isNaN(prix) ? prix.toFixed(2) : '0.00';
+        // Créer une version courte de la description (150 caractères)
+        const shortDesc = kit.description.length > 150 
+            ? kit.description.substring(0, 150) + '...'
+            : kit.description;
+
+        const isSelected = selectedKit && selectedKit.id === kit.id;
         
-        col.innerHTML = `
-            <div class="card h-100 kit-card" data-id="${kit.id}">
+        card.innerHTML = `
+            <div class="card h-100 kit-card ${isSelected ? 'border-primary' : ''}" data-id="${kit.id}">
                 <div id="kitCarousel${kit.id}" class="carousel slide" data-bs-ride="carousel">
                     <div class="carousel-inner">
-                        ${kit.images && kit.images.length > 0 ? 
-                            kit.images.map((image, index) => `
+                        ${kit.images && kit.images.length > 0 
+                            ? kit.images.map((image, index) => `
                                 <div class="carousel-item ${index === 0 ? 'active' : ''}">
                                     <img src="${image}" class="card-img-top" alt="${kit.nom}">
                                 </div>
-                            `).join('') :
-                            `<div class="carousel-item active">
-                                <div class="no-image-placeholder">Pas d'image disponible</div>
+                            `).join('')
+                            : `<div class="carousel-item active">
+                                <img src="images/kits/default.jpg" class="card-img-top" alt="${kit.nom}">
                             </div>`
                         }
                     </div>
@@ -409,78 +421,153 @@ document.addEventListener('DOMContentLoaded', function() {
                     ` : ''}
                 </div>
                 <div class="card-body">
-                    <h5 class="card-title">${kit.nom || 'Kit sans nom'}</h5>
-                    <p class="card-text">${kit.description || ''}</p>
-                    <p class="card-text">
-                        <small class="text-muted">Prix: ${prixFormate} €</small>
+                    <h5 class="card-title">${kit.nom}</h5>
+                    <p class="card-text description-preview">${shortDesc}</p>
+                    ${kit.description.length > 150 
+                        ? `<button type="button" class="btn btn-link p-0 voir-plus" data-bs-toggle="modal" data-bs-target="#kitModal${kit.id}">
+                            Voir plus <i class="bi bi-arrow-right"></i>
+                           </button>` 
+                        : ''
+                    }
+                    <p class="card-text mt-2">
+                        <strong>Prix : ${formatPrix(kit.prix)}</strong>
                     </p>
                 </div>
                 <div class="card-footer bg-transparent">
-                    <button class="btn btn-primary w-100 select-kit" data-id="${kit.id}" data-prix="${prixFormate}">
-                        Sélectionner
+                    <button class="btn ${isSelected ? 'btn-danger' : 'btn-primary'} w-100 select-kit" data-id="${kit.id}" data-prix="${kit.prix}">
+                        ${isSelected ? 'Désélectionner' : 'Sélectionner'}
                     </button>
                 </div>
             </div>
+
+            ${kit.description.length > 150 ? `
+                <div class="modal fade" id="kitModal${kit.id}" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">${kit.nom}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div id="kitModalCarousel${kit.id}" class="carousel slide" data-bs-ride="carousel">
+                                            <div class="carousel-inner">
+                                                ${kit.images && kit.images.length > 0 
+                                                    ? kit.images.map((image, index) => `
+                                                        <div class="carousel-item ${index === 0 ? 'active' : ''}">
+                                                            <img src="${image}" class="img-fluid rounded" alt="${kit.nom}">
+                                                        </div>
+                                                    `).join('')
+                                                    : `<div class="carousel-item active">
+                                                        <img src="images/kits/default.jpg" class="img-fluid rounded" alt="${kit.nom}">
+                                                    </div>`
+                                                }
+                                            </div>
+                                            ${kit.images && kit.images.length > 1 ? `
+                                                <button class="carousel-control-prev" type="button" data-bs-target="#kitModalCarousel${kit.id}" data-bs-slide="prev">
+                                                    <span class="carousel-control-prev-icon"></span>
+                                                </button>
+                                                <button class="carousel-control-next" type="button" data-bs-target="#kitModalCarousel${kit.id}" data-bs-slide="next">
+                                                    <span class="carousel-control-next-icon"></span>
+                                                </button>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="mb-3">Description détaillée :</h6>
+                                        <p style="white-space: pre-line;">${kit.description}</p>
+                                        <p class="mt-3">
+                                            <strong>Prix : ${formatPrix(kit.prix)}</strong>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                                <button type="button" class="btn ${isSelected ? 'btn-danger' : 'btn-primary'} select-kit-modal" data-id="${kit.id}" data-prix="${kit.prix}" data-bs-dismiss="modal">
+                                    ${isSelected ? 'Désélectionner' : 'Sélectionner ce kit'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
         `;
 
-        // Ajouter l'événement de sélection
-        const selectButton = col.querySelector('.select-kit');
-        selectButton.addEventListener('click', function() {
-            const kitId = this.dataset.id;
-            const kitPrix = parseFloat(this.dataset.prix);
-            const kitCard = this.closest('.kit-card');
-            const kitNom = kitCard.querySelector('.card-title').textContent;
+        // Ajouter les gestionnaires d'événements pour les boutons de sélection
+        const selectButtons = card.querySelectorAll('.select-kit, .select-kit-modal');
+        selectButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const kitId = this.dataset.id;
+                const prix = parseFloat(this.dataset.prix);
+                const isCurrentlySelected = selectedKit && selectedKit.id === kitId;
 
-            if (selectedKit && selectedKit.id === kitId) {
-                // Désélection du kit
-                selectedKit = null;
-                kitCard.classList.remove('border-primary');
-                this.textContent = 'Sélectionner';
-                this.classList.remove('btn-danger');
-                this.classList.add('btn-primary');
-            } else {
-                // Sélection du kit
-                // Désélectionner l'ancien kit s'il y en a un
-                if (selectedKit) {
-                    const oldKitCard = document.querySelector(`.kit-card[data-id="${selectedKit.id}"]`);
-                    if (oldKitCard) {
-                        oldKitCard.classList.remove('border-primary');
-                        const oldButton = oldKitCard.querySelector('.select-kit');
-                        oldButton.textContent = 'Sélectionner';
-                        oldButton.classList.remove('btn-danger');
-                        oldButton.classList.add('btn-primary');
+                if (isCurrentlySelected) {
+                    // Désélection du kit
+                    selectedKit = null;
+                    kitPrix = 0;
+
+                    // Réinitialiser l'apparence du bouton
+                    document.querySelectorAll(`.kit-card[data-id="${kitId}"]`).forEach(k => {
+                        k.classList.remove('border-primary');
+                        const selectBtn = k.querySelector('button.select-kit');
+                        selectBtn.classList.remove('btn-danger');
+                        selectBtn.classList.add('btn-primary');
+                        selectBtn.textContent = 'Sélectionner';
+                    });
+
+                    // Masquer la section des options et réinitialiser les options
+                    document.getElementById('step-options').style.display = 'none';
+                    selectedOptions = new Set();
+                    const optionsContainer = document.querySelector('.option-container');
+                    if (optionsContainer) {
+                        optionsContainer.innerHTML = '';
                     }
+                } else {
+                    // Réinitialiser tous les kits
+                    document.querySelectorAll('.kit-card').forEach(k => {
+                        k.classList.remove('border-primary');
+                        const selectBtn = k.querySelector('button.select-kit');
+                        selectBtn.classList.remove('btn-danger');
+                        selectBtn.classList.add('btn-primary');
+                        selectBtn.textContent = 'Sélectionner';
+                    });
+
+                    // Sélection du nouveau kit
+                    selectedKit = { id: kitId, prix: prix };
+                    kitPrix = prix;
+
+                    // Mettre en évidence le kit sélectionné
+                    const selectedCard = document.querySelector(`.kit-card[data-id="${kitId}"]`);
+                    selectedCard.classList.add('border-primary');
+                    const selectBtn = selectedCard.querySelector('button.select-kit');
+                    selectBtn.classList.remove('btn-primary');
+                    selectBtn.classList.add('btn-danger');
+                    selectBtn.textContent = 'Désélectionner';
+
+                    // Afficher la section des options
+                    document.getElementById('step-options').style.display = 'block';
+
+                    // Charger les options compatibles
+                    loadOptions(selectedVehicule);
                 }
-                
-                selectedKit = { 
-                    id: kitId, 
-                    prix: kitPrix,
-                    nom: kitNom
-                };
-                kitCard.classList.add('border-primary');
-                this.textContent = 'Désélectionner';
-                this.classList.remove('btn-primary');
-                this.classList.add('btn-danger');
-            }
-            
-            updateRecap();
-            updateTotal();
-            
-            // Sauvegarder la configuration
-            saveConfiguration();
+
+                // Mettre à jour le récapitulatif
+                updateRecap();
+
+                // Sauvegarder la configuration
+                saveConfiguration();
+            });
         });
 
-        return col;
+        return card;
     }
 
-    // Créer une carte d'option
+    // Simplifier la fonction createOptionCard
     function createOptionCard(option) {
         const col = document.createElement('div');
         col.className = 'col-md-6 col-lg-4';
-        
-        // Vérifier et formater le prix
-        const prix = parseFloat(option.prix);
-        const prixFormate = !isNaN(prix) ? prix.toFixed(2) : '0.00';
         
         col.innerHTML = `
             <div class="card h-100 option-card" data-id="${option.id}">
@@ -493,7 +580,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                             `).join('') :
                             `<div class="carousel-item active">
-                                <div class="no-image-placeholder">Pas d'image disponible</div>
+                                <img src="images/options/default.jpg" class="card-img-top" alt="${option.nom}">
                             </div>`
                         }
                     </div>
@@ -510,7 +597,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <h5 class="card-title">${option.nom || 'Option sans nom'}</h5>
                     <p class="card-text">${option.description || ''}</p>
                     <p class="card-text">
-                        <small class="text-muted">Prix: ${prixFormate} €</small>
+                        <strong>Prix : ${formatPrix(option.prix)}</strong>
                     </p>
                 </div>
                 <div class="card-footer bg-transparent">
@@ -518,10 +605,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         <input class="form-check-input option-checkbox" type="checkbox" 
                                id="option${option.id}" 
                                data-id="${option.id}" 
-                               data-prix="${prixFormate}"
+                               data-prix="${option.prix}"
                                data-nom="${option.nom || 'Option sans nom'}">
                         <label class="form-check-label" for="option${option.id}">
-                            Sélectionner
+                            Sélectionner cette option
                         </label>
                     </div>
                 </div>
@@ -542,20 +629,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     prix: optionPrix,
                     nom: optionNom
                 });
-                optionCard.classList.add('border-primary');
+                optionCard.classList.add('selected');
             } else {
-                // Trouver et supprimer l'option
                 selectedOptions.forEach(opt => {
                     if (opt.id === optionId) {
                         selectedOptions.delete(opt);
                     }
                 });
-                optionCard.classList.remove('border-primary');
+                optionCard.classList.remove('selected');
             }
+
             updateRecap();
-            updateTotal();
-            
-            // Sauvegarder la configuration
             saveConfiguration();
         });
 

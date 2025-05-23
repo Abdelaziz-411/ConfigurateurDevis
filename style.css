@@ -178,3 +178,132 @@ footer {
 .text-muted {
     font-weight: 500;
 }
+
+/* Styles pour les cartes de kits */
+.kit-card {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.kit-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.kit-card.border-primary {
+    border-color: var(--bs-primary) !important;
+}
+
+.description-preview {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.voir-plus {
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+.voir-plus:hover {
+    text-decoration: underline;
+}
+
+/* Styles pour la modale des kits */
+.modal-body img {
+    max-height: 400px;
+    width: 100%;
+    object-fit: cover;
+}
+
+.modal-body .carousel {
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.modal-body .carousel-item {
+    padding: 1rem;
+}
+
+.modal-body p {
+    text-align: justify;
+    margin-bottom: 1rem;
+}
+
+/* Amélioration des contrôles du carousel */
+.carousel-control-prev,
+.carousel-control-next {
+    width: 10%;
+    background: rgba(0,0,0,0.2);
+    border-radius: 0;
+}
+
+.carousel-control-prev:hover,
+.carousel-control-next:hover {
+    background: rgba(0,0,0,0.3);
+}
+
+/* Style pour le bouton sélectionné */
+.btn-success {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.btn-success::before {
+    content: "✓";
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Animation pour les transitions */
+.card-body {
+    transition: all 0.3s ease;
+}
+
+.modal.fade .modal-dialog {
+    transition: transform 0.3s ease-out;
+}
+
+.modal.show .modal-dialog {
+    transform: none;
+}
+
+/* Styles pour les options */
+.option-card {
+    transition: all 0.3s ease;
+}
+
+.option-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+/* Style pour les options sélectionnées */
+.option-card.selected {
+    border: 2px solid var(--bs-primary);
+}
+
+.option-card .form-check-input:checked ~ .form-check-label {
+    color: var(--bs-primary);
+    font-weight: 500;
+}
+
+/* Espacement entre les options */
+.option-container .row {
+    margin-bottom: 2rem;
+}
+
+/* Style pour les images des options */
+.option-card .card-img-top {
+    height: 200px;
+    object-fit: cover;
+}
+
+/* Style pour les prix */
+.option-card .card-text strong {
+    color: var(--bs-primary);
+}
