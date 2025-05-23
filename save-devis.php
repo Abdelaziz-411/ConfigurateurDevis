@@ -52,8 +52,16 @@ try {
 
     $devis_id = $pdo->lastInsertId();
 
-    // Récupérer l'email de l'administrateur
-    $stmt = $pdo->query("SELECT email FROM administrateurs LIMIT 1");
+    // Récupérer l'email des administrateurs
+    $stmt = $pdo->query("
+        SELECT u.email 
+        FROM utilisateurs u 
+        JOIN roles r ON u.role_id = r.id 
+        JOIN users_statuts s ON u.statut_id = s.id 
+        WHERE r.libelle = 'admin' 
+        AND s.libelle = 'actif' 
+        LIMIT 1
+    ");
     $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($admin) {
