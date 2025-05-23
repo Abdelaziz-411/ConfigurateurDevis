@@ -1,0 +1,34 @@
+# Configuration
+config.php
+
+# Dossiers de dépendances
+/vendor/
+/node_modules/
+
+# Fichiers d'environnement
+.env
+.env.local
+.env.*.local
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Dossiers de cache
+*.log
+*.cache
+.sass-cache/
+
+# Images uploadées (si vous ne voulez pas les versionner)
+/images/vehicules/*
+/images/kits/*
+/images/options/*
+!images/vehicules/.gitkeep
+!images/kits/.gitkeep
+!images/options/.gitkeep
+
+# Fichiers IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace 

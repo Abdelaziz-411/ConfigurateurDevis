@@ -1,0 +1,180 @@
+/* Variables et styles de base */
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --accent-color: #e74c3c;
+    --background-color: #f8f9fa;
+    --text-color: #2c3e50;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --transition: all 0.3s ease;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background: var(--background-color);
+    color: var(--text-color);
+    min-height: 100vh;
+}
+
+/* Styles des cartes */
+.card {
+    transition: var(--transition);
+    border: 2px solid transparent;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow);
+}
+
+.card.border-primary {
+    border-color: var(--primary-color) !important;
+}
+
+/* Styles des images */
+.card-img-top {
+    height: 200px;
+    object-fit: cover;
+}
+
+/* Carousel des kits */
+.carousel {
+    border-radius: 0.375rem 0.375rem 0 0;
+    overflow: hidden;
+}
+
+.carousel-item img {
+    height: 200px;
+    object-fit: cover;
+}
+
+.carousel-control-prev,
+.carousel-control-next {
+    width: 10%;
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.carousel:hover .carousel-control-prev,
+.carousel:hover .carousel-control-next {
+    opacity: 0.8;
+}
+
+/* Styles des boutons */
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+/* Styles du récapitulatif */
+.recap-section {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    margin-bottom: 1.5rem;
+}
+
+.recap-section:last-child {
+    margin-bottom: 0;
+}
+
+.recap-section h4 {
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.recap-section ul {
+    margin-bottom: 0;
+}
+
+.recap-section li {
+    padding: 0.25rem 0;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Styles responsifs */
+@media (max-width: 768px) {
+    .card-img-top {
+        height: 150px;
+    }
+    
+    .carousel-item img {
+        height: 150px;
+    }
+}
+
+/* Styles pour le footer */
+footer {
+    border-top: 1px solid #dee2e6;
+}
+
+/* Styles pour les checkboxes */
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* Styles pour les prix */
+.text-primary {
+    color: var(--primary-color) !important;
+}
+
+/* Styles pour les titres */
+.display-4 {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.lead {
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+.no-image-placeholder {
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Ajustements pour les cartes */
+.kit-card, .option-card {
+    transition: all 0.3s ease;
+}
+
+.kit-card.border-primary, .option-card.border-primary {
+    box-shadow: 0 0 10px rgba(0,123,255,0.3);
+}
+
+/* Animation du prix total */
+#total {
+    transition: all 0.3s ease;
+}
+
+/* Style pour les prix */
+.text-muted {
+    font-weight: 500;
+}
