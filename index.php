@@ -26,14 +26,6 @@ $vehicules = $pdo->query("SELECT * FROM vehicules ORDER BY nom")->fetchAll(PDO::
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="#configurateur">Configurer</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#devis">Devis</a>
-                    </li>
-                </ul>
                 <ul class="navbar-nav">
                     <?php if (isset($_SESSION['utilisateur_id']) && $_SESSION['role'] === 'admin'): ?>
                         <li class="nav-item">

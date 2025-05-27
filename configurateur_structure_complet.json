@@ -1,0 +1,92 @@
+{
+  "configurator": {
+    "vehicle_choice": {
+      "question": "Avez-vous un véhicule ?",
+      "options": [
+        { "label": "oui" },
+        { "label": "non" }
+      ]
+    },
+    "kits": {
+      "description": "Création, modification et suppression des kits disponibles.",
+      "items": []
+    },
+    "options": {
+      "ouvertures": {
+        "lanterneau": {
+          "prix": { "valeur": 240, "unité": "€ TTC", "modifiable": true }
+        },
+        "fenetre": {
+          "prix": { "valeur": 324, "unité": "€ TTC", "modifiable": true }
+        },
+        "aerations_basse_haute": {
+          "prix": { "valeur": 85, "unité": "€ TTC", "modifiable": true }
+        }
+      },
+      "isolation": {
+        "liege": {
+          "prix": { "valeur": 42, "unité": "€ TTC / m²", "modifiable": true }
+        },
+        "chanvre": {
+          "prix": { "valeur": 29.4, "unité": "€ TTC / m²", "modifiable": true }
+        }
+      },
+      "habillage": {
+        "compte_plaque_5mm_brut": {
+          "dimensions": { "L1H1": null, "L2H1": null, "L2H2": null, "L3H2": null, "L3H3": null, "L4H3": null }
+        },
+        "stratifie": {
+          "dimensions": { "L1H1": null, "L2H1": null, "L2H2": null, "L3H2": null, "L3H3": null, "L4H3": null }
+        },
+        "plafond_claustra": {
+          "dimensions": { "L1H1": null, "L2H1": null, "L2H2": null, "L3H2": null, "L3H3": null, "L4H3": null }
+        },
+        "sol": {
+          "brut_10mm":    { "dimensions": { "L1H1": null, "L2H1": null, "L2H2": null, "L3H2": null, "L3H3": null, "L4H3": null } },
+          "avec_vinyle":  { "dimensions": { "L1H1": null, "L2H1": null, "L2H2": null, "L3H2": null, "L3H3": null, "L4H3": null } }
+        }
+      },
+      "finitions": {
+        "mobilier_brut":      { "prix": { "valeur": 0, "modifiable": true } },
+        "mobilier_stratifie": { "dimensions": { "L1H1": null, "L2H1": null, "L2H2": null, "L3H2": null, "L3H3": null, "L4H3": null } },
+        "feutrine":           { "dimensions": { "L1H1": null, "L2H1": null, "L2H2": null, "L3H2": null, "L3H3": null, "L4H3": null } }
+      },
+      "marchandises": {
+        "chauffage": {
+          "base": { "valeur": 1356, "modifiable": true },
+          "par_taille": { "L1H1": null, "L2H1": null, "L2H2": null, "L3H2": null, "L3H3": null, "L4H3": null }
+        },
+        "chauffage_chauffe_eau": { "valeur": 2340, "modifiable": true },
+        "banquette": {
+          "base": null,
+          "par_taille": { "L1H1": null, "L2H1": null, "L2H2": null, "L3H2": null, "L3H3": null, "L4H3": null }
+        },
+        "embase_pivotante": {
+          "base": null,
+          "par_taille": { "L1H1": null, "L2H1": null, "L2H2": null, "L3H2": null, "L3H3": null, "L4H3": null }
+        },
+        "toilettes": {
+          "base": null,
+          "par_taille": { "L1H1": null, "L2H1": null, "L2H2": null, "L3H2": null, "L3H3": null, "L4H3": null }
+        },
+        "frigo": {
+          "base": null,
+          "par_taille": { "L1H1": null, "L2H1": null, "L2H2": null, "L3H2": null, "L3H3": null, "L4H3": null }
+        }
+      }
+    }
+  },
+  "meta": {
+    "description": "Structure de base du configurateur de véhicules",
+    "remarques": [
+      "Garder la logique de création, modification, suppression et de choix des véhicules en posant la question aux utilisateurs.",
+      "Garder la logique de création, modification, suppression des kits.",
+      "L’administrateur doit pouvoir créer, modifier et supprimer les nouvelles fonctionnalités comme les véhicules, kits, et options.",
+      "L’option 'chauffage' déjà créée fait partie de (III. options E. marchandises 1. chauffage).",
+      "La plupart des options n’ont pas de prix fixés dans ce fichier : cela doit être défini par l’admin.",
+      "Tous les fichiers (et la base de données) devront être adaptés pour intégrer ces nouvelles fonctionnalités.",
+      "Cette structure est une version de base, non définitive."
+    ],
+    "note": "Avancer étape par étape en ajoutant les nouvelles fonctionnalités et améliorations au configurateur."
+  }
+}
