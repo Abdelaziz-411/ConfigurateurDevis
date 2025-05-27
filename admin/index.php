@@ -14,7 +14,11 @@ $stats = [
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Administration - Configurateur de Véhicule</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -168,12 +172,27 @@ $stats = [
 
     <div class="container">
         <div class="nav">
-            <a href="index.php" class="active">Tableau de bord</a>
-            <a href="vehicules.php">Véhicules</a>
-            <a href="kits.php">Kits</a>
-            <a href="options.php">Options</a>
-            <a href="gestion_images.php">Gestion des Images</a>
-            <a href="../" target="_blank">Voir le site</a>
+            <a href="index.php" <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'class="active"' : ''; ?>>
+                <i class="bi bi-speedometer2"></i> Tableau de bord
+            </a>
+            <a href="vehicules.php" <?php echo basename($_SERVER['PHP_SELF']) == 'vehicules.php' ? 'class="active"' : ''; ?>>
+                <i class="bi bi-truck"></i> Véhicules
+            </a>
+            <a href="kits.php" <?php echo basename($_SERVER['PHP_SELF']) == 'kits.php' ? 'class="active"' : ''; ?>>
+                <i class="bi bi-box"></i> Kits
+            </a>
+            <a href="options.php" <?php echo basename($_SERVER['PHP_SELF']) == 'options.php' ? 'class="active"' : ''; ?>>
+                <i class="bi bi-gear"></i> Options
+            </a>
+            <a href="gestion_images.php" <?php echo basename($_SERVER['PHP_SELF']) == 'gestion_images.php' ? 'class="active"' : ''; ?>>
+                <i class="bi bi-images"></i> Gestion des Images
+            </a>
+            <a href="devis.php" <?php echo basename($_SERVER['PHP_SELF']) == 'devis.php' ? 'class="active"' : ''; ?>>
+                <i class="bi bi-file-earmark-text"></i> Devis
+            </a>
+            <a href="../" target="_blank">
+                <i class="bi bi-eye"></i> Voir le site
+            </a>
         </div>
 
         <div class="stats">

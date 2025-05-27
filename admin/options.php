@@ -21,11 +21,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     // Insérer l'option avec un prix par défaut de 0
                     $stmt = $pdo->prepare("INSERT INTO options (nom, description, prix) VALUES (?, ?, 0.00)");
-                    $stmt->execute([$nom, $description]);
-                    $id = $pdo->lastInsertId();
-                    
-                    // Ajouter les compatibilités avec les véhicules
-                    foreach ($_POST['vehicules'] as $vehicule_id) {
+                $stmt->execute([$nom, $description]);
+                $id = $pdo->lastInsertId();
+                
+                // Ajouter les compatibilités avec les véhicules
+                foreach ($_POST['vehicules'] as $vehicule_id) {
                         $prix_key = 'prix_' . $vehicule_id;
                         
                         // Vérifier si le prix est défini et le convertir en nombre
@@ -42,28 +42,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ':id_vehicule' => $vehicule_id,
                             ':prix' => $prix
                         ]);
-                    }
-                    
-                    // Gestion des images
-                    if (!empty($_FILES['images']['name'][0])) {
-                        foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) {
-                            $file = $_FILES['images']['name'][$key];
-                            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                }
+                
+                // Gestion des images
+                if (!empty($_FILES['images']['name'][0])) {
+                    foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) {
+                        $file = $_FILES['images']['name'][$key];
+                        $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                        
+                        if (in_array($ext, ['jpg', 'jpeg', 'png'])) {
+                            $filename = uniqid() . '.' . $ext;
+                            $path = '../images/options/' . $filename;
                             
-                            if (in_array($ext, ['jpg', 'jpeg', 'png'])) {
-                                $filename = uniqid() . '.' . $ext;
-                                $path = '../images/options/' . $filename;
-                                
-                                if (move_uploaded_file($tmp_name, $path)) {
-                                    $stmt = $pdo->prepare("INSERT INTO option_images (id_option, image_path) VALUES (?, ?)");
-                                    $stmt->execute([$id, $filename]);
-                                }
+                            if (move_uploaded_file($tmp_name, $path)) {
+                                $stmt = $pdo->prepare("INSERT INTO option_images (id_option, image_path) VALUES (?, ?)");
+                                $stmt->execute([$id, $filename]);
                             }
                         }
                     }
-                    
-                    header('Location: options.php?success=add');
-                    exit;
+                }
+                
+                header('Location: options.php?success=add');
+                exit;
                 } catch (PDOException $e) {
                     die("Une erreur est survenue lors de l'ajout de l'option : " . $e->getMessage());
                 } catch (Exception $e) {
@@ -222,8 +222,8 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
                                         <?= htmlspecialchars($vehicule['nom']) ?>
                                     </label>
                                 </div>
-                                <div class="input-group mt-1 prix-input" style="display: none;">
-                                    <input type="number" class="form-control" 
+                                <div class="input-group mt-1">
+                                    <input type="number" class="form-control prix-input" 
                                            name="prix_<?= $vehicule['id'] ?>" 
                                            placeholder="Prix" 
                                            step="0.01" 
@@ -301,8 +301,8 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
                                         <?= htmlspecialchars($vehicule['nom']) ?>
                                     </label>
                                 </div>
-                                <div class="input-group mt-1 prix-input" style="display: <?= in_array($vehicule['id'], $option['vehicules_ids']) ? 'flex' : 'none' ?>;">
-                                    <input type="number" class="form-control" 
+                                <div class="input-group mt-1">
+                                    <input type="number" class="form-control prix-input" 
                                            name="prix_<?= $vehicule['id'] ?>" 
                                            placeholder="Prix" 
                                            step="0.01" 
@@ -401,14 +401,14 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
                     <td>
                         <?php if (!empty($option['vehicules_prix'])): ?>
                             <div class="vehicules-list" style="max-height: 100px; overflow-y: auto;">
-                                <ul class="list-unstyled mb-0">
-                                    <?php foreach ($option['vehicules_prix'] as $vehicule => $prix): ?>
+                            <ul class="list-unstyled mb-0">
+                                <?php foreach ($option['vehicules_prix'] as $vehicule => $prix): ?>
                                         <li>
                                             <span class="fw-medium"><?= htmlspecialchars($vehicule) ?></span>
                                             <span class="text-success"><?= number_format($prix, 2, ',', ' ') ?> €</span>
                                         </li>
-                                    <?php endforeach; ?>
-                                </ul>
+                                <?php endforeach; ?>
+                            </ul>
                             </div>
                         <?php else: ?>
                             <span class="text-muted">Aucun véhicule</span>
@@ -469,7 +469,7 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
     margin-bottom: 0.25rem;
     padding: 0.25rem;
     border-bottom: 1px solid #eee;
-}
+    }
 
 .vehicules-list li:last-child {
     border-bottom: none;
@@ -483,59 +483,12 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
 
 .img-thumbnail {
     transition: transform 0.2s;
-}
+                }
 
 .img-thumbnail:hover {
     transform: scale(1.1);
 }
 </style>
-
-<script>
-function togglePrixInput(checkbox) {
-    const prixInput = checkbox.closest('.col-md-6').querySelector('.prix-input');
-    const prixInputField = prixInput.querySelector('input');
-    
-    if (checkbox.checked) {
-        prixInput.style.display = 'flex';
-        prixInputField.disabled = false;
-        prixInputField.required = true;
-    } else {
-        prixInput.style.display = 'none';
-        prixInputField.disabled = true;
-        prixInputField.required = false;
-        prixInputField.value = '';
-    }
-}
-
-document.querySelectorAll('.delete-image').forEach(button => {
-    button.addEventListener('click', function() {
-        if (confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) {
-            const id = this.dataset.id;
-            const type = this.dataset.type;
-            
-            fetch('delete_image.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `image_id=${id}&type=${type}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    this.closest('.col-auto').remove();
-                } else {
-                    alert('Erreur lors de la suppression de l\'image');
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                alert('Erreur lors de la suppression de l\'image');
-            });
-        }
-    });
-});
-</script>
 
 <?php endif; ?>
 <?php require 'footer.php'; ?> 

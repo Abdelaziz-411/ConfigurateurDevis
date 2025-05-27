@@ -6,9 +6,11 @@ require '../config.php';
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Administration - Configurateur de Véhicule</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administration - Configurateur</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -93,7 +95,94 @@ require '../config.php';
                 justify-content: center;
             }
         }
+        .preview-image {
+            display: inline-block;
+            margin: 5px;
+            text-align: center;
+        }
+        .preview-image img {
+            max-width: 100px;
+            height: auto;
+        }
     </style>
+    <script>
+    // Fonction pour gérer les champs de prix
+    function togglePrixInput(checkbox) {
+        const prixInput = checkbox.parentElement.nextElementSibling.querySelector('.prix-input');
+        if (checkbox.checked) {
+            prixInput.disabled = false;
+            prixInput.required = true;
+            prixInput.value = '0.00';
+        } else {
+            prixInput.disabled = true;
+            prixInput.required = false;
+            prixInput.value = '';
+        }
+    }
+
+    // Fonction pour afficher les images en prévisualisation
+    function previewImages(input) {
+        const previewContainer = document.getElementById('imagePreview');
+        previewContainer.innerHTML = '';
+        
+        if (input.files) {
+            Array.from(input.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const div = document.createElement('div');
+                    div.className = 'preview-image';
+                    div.innerHTML = `
+                        <img src="${e.target.result}" class="img-thumbnail" style="height: 100px;">
+                        <button type="button" class="btn btn-sm btn-danger mt-1" onclick="this.parentElement.remove()">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    `;
+                    previewContainer.appendChild(div);
+                }
+                reader.readAsDataURL(file);
+            });
+        }
+    }
+
+    // Initialiser les champs de prix pour les véhicules déjà sélectionnés
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.vehicule-check').forEach(checkbox => {
+            if (checkbox.checked) {
+                togglePrixInput(checkbox);
+            }
+        });
+
+        // Gestion de la suppression des images
+        document.querySelectorAll('.delete-image').forEach(button => {
+            button.addEventListener('click', function() {
+                if (confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) {
+                    const id = this.dataset.id;
+                    const type = this.dataset.type;
+                    
+                    fetch('delete_image.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `image_id=${id}&type=${type}`
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            this.closest('.col-auto').remove();
+                        } else {
+                            alert('Erreur lors de la suppression de l\'image');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur:', error);
+                        alert('Erreur lors de la suppression de l\'image');
+                    });
+                }
+            });
+        });
+    });
+    </script>
 </head>
 <body>
     <div class="header">

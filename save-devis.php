@@ -29,11 +29,11 @@ try {
         INSERT INTO devis (
             nom, prenom, email, telephone, message,
             id_vehicule, id_kit, configuration,
-            prix_ht, prix_ttc
+            prix_ht, prix_ttc, statut
         ) VALUES (
             :nom, :prenom, :email, :telephone, :message,
-            :id_vehicule, :id_kit, :configuration,
-            :prix_ht, :prix_ttc
+            :vehicule_id, :kit_id, :configuration,
+            :prix_ht, :prix_ttc, 'nouveau'
         )
     ");
 
@@ -43,8 +43,8 @@ try {
         'email' => $data['email'],
         'telephone' => $data['telephone'],
         'message' => $data['message'] ?? '',
-        'id_vehicule' => $data['vehicule_id'],
-        'id_kit' => $data['kit_id'] ?? null,
+        'vehicule_id' => $data['vehicule_id'],
+        'kit_id' => $data['kit_id'] ?? null,
         'configuration' => $data['configuration'],
         'prix_ht' => $data['prix_ht'],
         'prix_ttc' => $data['prix_ttc']
@@ -54,12 +54,9 @@ try {
 
     // Récupérer l'email des administrateurs
     $stmt = $pdo->query("
-        SELECT u.email 
-        FROM utilisateurs u 
-        JOIN roles r ON u.role_id = r.id 
-        JOIN users_statuts s ON u.statut_id = s.id 
-        WHERE r.libelle = 'admin' 
-        AND s.libelle = 'actif' 
+        SELECT email 
+        FROM utilisateurs 
+        WHERE role = 'admin' 
         LIMIT 1
     ");
     $admin = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -94,6 +91,6 @@ try {
     http_response_code(400);
     echo json_encode([
         'success' => false,
-        'message' => $e->getMessage()
+        'message' => 'Erreur lors de l\'envoi du devis : ' . $e->getMessage()
     ]);
 } 

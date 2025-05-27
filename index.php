@@ -149,41 +149,41 @@ $vehicules = $pdo->query("SELECT * FROM vehicules ORDER BY nom")->fetchAll(PDO::
         </div>
 
         <!-- Modal Formulaire de Contact -->
-        <div class="modal fade" id="devisModal" tabindex="-1">
-            <div class="modal-dialog">
+        <div class="modal fade" id="devisModal" tabindex="-1" aria-labelledby="devisModalLabel" role="dialog">
+            <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Demande de devis</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        <h5 class="modal-title" id="devisModalLabel">Demande de devis</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer" tabindex="0"></button>
                     </div>
                     <div class="modal-body">
                         <form id="formDevis">
                             <div class="mb-3">
                                 <label for="nom" class="form-label">Nom *</label>
-                                <input type="text" class="form-control" id="nom" name="nom" required>
+                                <input type="text" class="form-control" id="nom" name="nom" required autocomplete="family-name">
                             </div>
                             <div class="mb-3">
                                 <label for="prenom" class="form-label">Prénom *</label>
-                                <input type="text" class="form-control" id="prenom" name="prenom" required>
+                                <input type="text" class="form-control" id="prenom" name="prenom" required autocomplete="given-name">
                             </div>
                             <div class="mb-3">
                                 <label for="email" class="form-label">Email *</label>
-                                <input type="email" class="form-control" id="email" name="email" required>
+                                <input type="email" class="form-control" id="email" name="email" required autocomplete="email">
                             </div>
                             <div class="mb-3">
                                 <label for="telephone" class="form-label">Téléphone *</label>
-                                <input type="tel" class="form-control" id="telephone" name="telephone" required>
+                                <input type="tel" class="form-control" id="telephone" name="telephone" required autocomplete="tel">
                             </div>
                             <div class="mb-3">
                                 <label for="message" class="form-label">Message</label>
-                                <textarea class="form-control" id="message" name="message" rows="3"></textarea>
+                                <textarea class="form-control" id="message" name="message" rows="3" autocomplete="off"></textarea>
                             </div>
                             <p class="text-muted small">* Champs obligatoires</p>
                         </form>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                        <button type="button" class="btn btn-primary" id="btnEnvoyerDevis">Envoyer</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Annuler" tabindex="0">Annuler</button>
+                        <button type="button" class="btn btn-primary" id="btnEnvoyerDevis" aria-label="Envoyer la demande" tabindex="0">Envoyer</button>
                     </div>
                 </div>
             </div>

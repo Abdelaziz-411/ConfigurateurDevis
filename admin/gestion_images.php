@@ -11,42 +11,42 @@ try {
         throw new Exception("Tables manquantes : " . implode(', ', $missing_tables));
     }
     
-    // Récupérer toutes les images avec leurs informations associées
-    $images = $pdo->query("
-        SELECT 
+// Récupérer toutes les images avec leurs informations associées
+$images = $pdo->query("
+    SELECT 
             'vehicule' COLLATE utf8mb4_unicode_ci as type,
             v.nom COLLATE utf8mb4_unicode_ci as element_nom,
             vi.image_path COLLATE utf8mb4_unicode_ci as image_path,
-            vi.id as image_id,
-            v.id as element_id
-        FROM vehicules v
+        vi.id as image_id,
+        v.id as element_id
+    FROM vehicules v
         LEFT JOIN vehicle_images vi ON v.id = vi.id_vehicule
-        UNION ALL
-        SELECT 
+    UNION ALL
+    SELECT 
             'kit' COLLATE utf8mb4_unicode_ci as type,
             k.nom COLLATE utf8mb4_unicode_ci as element_nom,
             ki.image_path COLLATE utf8mb4_unicode_ci as image_path,
-            ki.id as image_id,
-            k.id as element_id
-        FROM kits k
+        ki.id as image_id,
+        k.id as element_id
+    FROM kits k
         LEFT JOIN kit_images ki ON k.id = ki.id_kit
-        UNION ALL
-        SELECT 
+    UNION ALL
+    SELECT 
             'option' COLLATE utf8mb4_unicode_ci as type,
             o.nom COLLATE utf8mb4_unicode_ci as element_nom,
             oi.image_path COLLATE utf8mb4_unicode_ci as image_path,
-            oi.id as image_id,
-            o.id as element_id
-        FROM options o
+        oi.id as image_id,
+        o.id as element_id
+    FROM options o
         LEFT JOIN option_images oi ON o.id = oi.id_option
-        ORDER BY type, element_nom
-    ")->fetchAll(PDO::FETCH_ASSOC);
+    ORDER BY type, element_nom
+")->fetchAll(PDO::FETCH_ASSOC);
 
-    // Grouper les images par type
-    $images_grouped = [];
-    foreach ($images as $image) {
+// Grouper les images par type
+$images_grouped = [];
+foreach ($images as $image) {
         if ($image['image_path'] !== null) {  // Ne prendre que les éléments avec des images
-            $images_grouped[$image['type']][] = $image;
+    $images_grouped[$image['type']][] = $image;
         }
     }
 } catch (Exception $e) {

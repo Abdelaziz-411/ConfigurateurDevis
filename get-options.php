@@ -12,10 +12,10 @@ $vehicule_id = (int)$_GET['vehicule_id'];
 try {
     // Récupérer les options compatibles avec le véhicule
     $sql = "
-        SELECT DISTINCT o.id, o.nom, o.description, ovc.prix, 
+        SELECT DISTINCT o.id, o.nom, o.description, COALESCE(ovc.prix, 0.00) as prix, 
         GROUP_CONCAT(DISTINCT CONCAT('images/options/', oi.image_path)) as images
         FROM options o
-        INNER JOIN option_vehicule_compatibilite ovc ON o.id = ovc.id_option AND ovc.id_vehicule = ?
+        LEFT JOIN option_vehicule_compatibilite ovc ON o.id = ovc.id_option AND ovc.id_vehicule = ?
         LEFT JOIN option_images oi ON o.id = oi.id_option
         GROUP BY o.id, o.nom, o.description, ovc.prix
         ORDER BY o.nom

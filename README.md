@@ -68,4 +68,49 @@ define('DB_PASS', 'mot_de_passe');
 - Les mots de passe sont hashés avec PASSWORD_DEFAULT
 - Protection contre les injections SQL avec PDO
 - Validation des entrées utilisateur
-- Gestion des droits d'accès administrateur 
+- Gestion des droits d'accès administrateur
+
+## Restauration de la base de données
+
+1. Ouvrez phpMyAdmin (http://localhost/phpmyadmin)
+2. Créez une nouvelle base de données nommée "configurateur"
+3. Cliquez sur l'onglet "Importer"
+4. Sélectionnez le fichier `configurateur.sql`
+5. **Important** : Dans la section "Options spécifiques à l'importation", cochez "Désactiver la vérification des clés étrangères"
+6. Cliquez sur "Exécuter"
+
+## Accès à l'administration
+
+- URL : http://localhost/mon-configurateur/admin/
+- Email : admin@example.com
+- Mot de passe : admin123
+
+## Structure du projet
+
+- `index.php` : Page principale du configurateur
+- `admin/` : Interface d'administration
+  - `vehicules.php` : Gestion des véhicules
+  - `kits.php` : Gestion des kits
+  - `options.php` : Gestion des options
+  - `gestion_images.php` : Gestion des images
+  - `devis.php` : Gestion des devis
+
+## Sauvegarde de la base de données
+
+1. Ouvrez phpMyAdmin
+2. Sélectionnez la base de données "configurateur"
+3. Cliquez sur "Exporter"
+4. Options recommandées :
+   - Format : SQL
+   - Ajouter CREATE DATABASE : Oui
+   - Ajouter DROP TABLE : Oui
+   - Ajouter les contraintes de clés étrangères : Oui
+5. Cliquez sur "Exécuter"
+6. Renommez le fichier exporté en `configurateur.sql`
+7. Placez-le à la racine du projet
+
+## Dépendances
+
+- PHP 7.4 ou supérieur
+- MySQL 5.7 ou supérieur
+- TCPDF (inclus dans le projet) 

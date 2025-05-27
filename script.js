@@ -124,35 +124,35 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             // Réinitialiser le récapitulatif
             html = '';
-            
-            // Ajouter le véhicule
-            if (selectedVehicule) {
-                const vehiculeCard = document.querySelector(`.vehicule-card[data-id="${selectedVehicule}"]`);
+
+        // Ajouter le véhicule
+        if (selectedVehicule) {
+            const vehiculeCard = document.querySelector(`.vehicule-card[data-id="${selectedVehicule}"]`);
                 if (vehiculeCard) {
                     const vehiculeNom = vehiculeCard.querySelector('.card-title')?.textContent || 'Véhicule sélectionné';
-                    html += `
-                        <div class="recap-section">
-                            <h4>Véhicule</h4>
-                            <p>${vehiculeNom}</p>
-                        </div>
-                    `;
+            html += `
+                <div class="recap-section">
+                    <h4>Véhicule</h4>
+                    <p>${vehiculeNom}</p>
+                </div>
+            `;
                 }
-            }
+        }
 
             // Ajouter le kit seulement s'il est sélectionné et valide
             if (selectedKit && selectedKit.id && selectedKit.prix) {
-                const prixHT = parseFloat(selectedKit.prix);
+            const prixHT = parseFloat(selectedKit.prix);
                 if (!isNaN(prixHT)) {
-                    total += prixHT;
-                    const kitCard = document.querySelector(`.kit-card[data-id="${selectedKit.id}"]`);
+            total += prixHT;
+            const kitCard = document.querySelector(`.kit-card[data-id="${selectedKit.id}"]`);
                     const kitNom = kitCard ? kitCard.querySelector('.card-title')?.textContent : 'Kit sélectionné';
-                    html += `
-                        <div class="recap-section">
-                            <h4>Kit d'aménagement</h4>
-                            <p>${kitNom} - ${formatPrix(prixHT, isTTC)}</p>
-                        </div>
-                    `;
-                }
+            html += `
+                <div class="recap-section">
+                    <h4>Kit d'aménagement</h4>
+                    <p>${kitNom} - ${formatPrix(prixHT, isTTC)}</p>
+                </div>
+            `;
+        }
             }
 
             // Ajouter les options seulement si elles sont valides
@@ -164,50 +164,50 @@ document.addEventListener('DOMContentLoaded', function() {
             );
 
             if (validOptions.length > 0) {
-                html += `
-                    <div class="recap-section">
-                        <h4>Options sélectionnées</h4>
-                        <ul class="list-unstyled">
-                `;
-                
+            html += `
+                <div class="recap-section">
+                    <h4>Options sélectionnées</h4>
+                    <ul class="list-unstyled">
+            `;
+            
                 validOptions.forEach(option => {
-                    const prixHT = parseFloat(option.prix);
-                    total += prixHT;
-                    html += `
-                        <li>${option.nom || 'Option'} - ${formatPrix(prixHT, isTTC)}</li>
-                    `;
-                });
-                
+                const prixHT = parseFloat(option.prix);
+                total += prixHT;
                 html += `
-                        </ul>
-                    </div>
+                        <li>${option.nom || 'Option'} - ${formatPrix(prixHT, isTTC)}</li>
                 `;
-            }
+            });
+            
+            html += `
+                    </ul>
+                </div>
+            `;
+        }
 
             // Ajouter le total seulement s'il est valide
             if (!isNaN(total) && total >= 0) {
-                const totalTTC = isTTC ? calculerPrixTTC(total) : total;
-                html += `
-                    <div class="recap-section border-top pt-3 mt-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h4 class="mb-0">Total ${isTTC ? 'TTC' : 'HT'}</h4>
-                            <p class="h3 mb-0">${totalTTC.toFixed(2)} €</p>
-                        </div>
-                        ${isTTC ? `
-                        <div class="d-flex justify-content-between align-items-center mt-2">
-                            <small class="text-muted">Total HT</small>
-                            <small class="text-muted">${total.toFixed(2)} €</small>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted">TVA (20%)</small>
-                            <small class="text-muted">${(totalTTC - total).toFixed(2)} €</small>
-                        </div>
-                        ` : ''}
-                    </div>
-                `;
+        const totalTTC = isTTC ? calculerPrixTTC(total) : total;
+        html += `
+            <div class="recap-section border-top pt-3 mt-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Total ${isTTC ? 'TTC' : 'HT'}</h4>
+                    <p class="h3 mb-0">${totalTTC.toFixed(2)} €</p>
+                </div>
+                ${isTTC ? `
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <small class="text-muted">Total HT</small>
+                    <small class="text-muted">${total.toFixed(2)} €</small>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">TVA (20%)</small>
+                    <small class="text-muted">${(totalTTC - total).toFixed(2)} €</small>
+                </div>
+                ` : ''}
+            </div>
+        `;
             }
 
-            recapDetails.innerHTML = html;
+        recapDetails.innerHTML = html;
             const recapElement = document.getElementById('recap');
             if (recapElement) {
                 recapElement.style.display = selectedVehicule ? 'block' : 'none';
@@ -246,12 +246,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectedOptions = new Set();
                 
                 // Mettre à jour le véhicule sélectionné
-                selectedVehicule = vehiculeId;
-                
-                // Mettre à jour l'interface
-                vehiculeCards.forEach(c => c.classList.remove('border-primary'));
-                card.classList.add('border-primary');
-                
+            selectedVehicule = vehiculeId;
+            
+            // Mettre à jour l'interface
+            vehiculeCards.forEach(c => c.classList.remove('border-primary'));
+            card.classList.add('border-primary');
+            
                 // Réinitialiser l'interface des kits et options
                 resetKitsUI();
                 resetOptionsUI();
@@ -275,12 +275,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Charger les nouveaux kits et options
                     await loadKits(vehiculeId);
                     await loadOptions(vehiculeId);
-                    
-                    // Afficher les sections
-                    document.getElementById('step-kit').style.display = 'block';
-                    document.getElementById('step-options').style.display = 'block';
-                    document.getElementById('step-kit').scrollIntoView({ behavior: 'smooth' });
-                    
+            
+            // Afficher les sections
+            document.getElementById('step-kit').style.display = 'block';
+            document.getElementById('step-options').style.display = 'block';
+            document.getElementById('step-kit').scrollIntoView({ behavior: 'smooth' });
+            
                     // Sauvegarder la nouvelle configuration
                     saveConfiguration();
                 } catch (error) {
@@ -313,29 +313,29 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch(`get-kits.php?vehicule_id=${vehiculeId}`);
             const data = await response.json();
             
-            const kitGallery = document.getElementById('kit-gallery');
+                    const kitGallery = document.getElementById('kit-gallery');
             if (!kitGallery) return;
 
             // Vérifier si data existe et contient la propriété success
             if (data && data.success && data.kits) {
-                kitGallery.innerHTML = '';
+                    kitGallery.innerHTML = '';
                 if (data.kits.length > 0) {
-                    data.kits.forEach(kit => {
+                        data.kits.forEach(kit => {
                         if (kit && kit.id) { // Vérifier que le kit est valide
                             const kitCard = createKitCard(kit);
                             kitGallery.appendChild(kitCard);
                         }
-                    });
+                        });
+                    } else {
+                        kitGallery.innerHTML = '<div class="col-12"><div class="alert alert-info">Aucun kit disponible pour ce véhicule.</div></div>';
+                    }
                 } else {
-                    kitGallery.innerHTML = '<div class="col-12"><div class="alert alert-info">Aucun kit disponible pour ce véhicule.</div></div>';
-                }
-            } else {
                 console.error('Erreur:', data?.message || 'Réponse invalide du serveur');
-                kitGallery.innerHTML = '<div class="col-12"><div class="alert alert-danger">Erreur lors du chargement des kits.</div></div>';
-            }
+                    kitGallery.innerHTML = '<div class="col-12"><div class="alert alert-danger">Erreur lors du chargement des kits.</div></div>';
+                }
         } catch (error) {
-            console.error('Erreur:', error);
-            const kitGallery = document.getElementById('kit-gallery');
+                console.error('Erreur:', error);
+                const kitGallery = document.getElementById('kit-gallery');
             if (kitGallery) {
                 kitGallery.innerHTML = '<div class="col-12"><div class="alert alert-danger">Erreur lors du chargement des kits.</div></div>';
             }
@@ -402,9 +402,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="carousel-inner">
                         ${kit.images && kit.images.length > 0 
                             ? kit.images.map((image, index) => `
-                                <div class="carousel-item ${index === 0 ? 'active' : ''}">
+                            <div class="carousel-item ${index === 0 ? 'active' : ''}">
                                     <img src="${image}" class="card-img-top" alt="${kit.nom}">
-                                </div>
+                            </div>
                             `).join('')
                             : `<div class="carousel-item active">
                                 <img src="images/kits/default.jpg" class="card-img-top" alt="${kit.nom}">
@@ -499,13 +499,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectButtons = card.querySelectorAll('.select-kit, .select-kit-modal');
         selectButtons.forEach(button => {
             button.addEventListener('click', function() {
-                const kitId = this.dataset.id;
+            const kitId = this.dataset.id;
                 const prix = parseFloat(this.dataset.prix);
                 const isCurrentlySelected = selectedKit && selectedKit.id === kitId;
 
                 if (isCurrentlySelected) {
-                    // Désélection du kit
-                    selectedKit = null;
+                // Désélection du kit
+                selectedKit = null;
                     kitPrix = 0;
 
                     // Réinitialiser l'apparence du bouton
@@ -651,13 +651,41 @@ document.addEventListener('DOMContentLoaded', function() {
     const devisModal = new bootstrap.Modal(document.getElementById('devisModal'));
     const btnEnvoyerDevis = document.getElementById('btnEnvoyerDevis');
     const formDevis = document.getElementById('formDevis');
+    let lastFocusedElement = null;
+    const modalElement = document.getElementById('devisModal');
+    const mainContent = document.querySelector('main') || document.body;
 
     btnDemandeDevis.addEventListener('click', () => {
         if (!selectedVehicule) {
             alert('Veuillez sélectionner un véhicule');
             return;
         }
+        lastFocusedElement = document.activeElement;
+        mainContent.setAttribute('inert', '');
+        modalElement.removeAttribute('inert');
         devisModal.show();
+    });
+
+    // Gestion du focus lors de l'ouverture du modal
+    modalElement.addEventListener('shown.bs.modal', function () {
+        document.getElementById('nom').focus();
+    });
+
+    // Gestion du focus lors de la fermeture du modal
+    modalElement.addEventListener('hidden.bs.modal', function () {
+        mainContent.removeAttribute('inert');
+        modalElement.setAttribute('inert', '');
+        if (lastFocusedElement) {
+            lastFocusedElement.focus();
+        }
+    });
+
+    // Gestion de la touche Escape
+    modalElement.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            mainContent.removeAttribute('inert');
+            modalElement.setAttribute('inert', '');
+        }
     });
 
     btnEnvoyerDevis.addEventListener('click', async () => {
