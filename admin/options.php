@@ -217,17 +217,19 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
                                            id="vehicule_<?= $vehicule['id'] ?>" 
                                            name="vehicules[]" 
                                            value="<?= $vehicule['id'] ?>"
-                                           onchange="togglePrixInput(this)">
+                                           <?= $isChecked ? 'checked' : '' ?>>
                                     <label class="form-check-label" for="vehicule_<?= $vehicule['id'] ?>">
                                         <?= htmlspecialchars($vehicule['nom']) ?>
                                     </label>
                                 </div>
-                                <div class="input-group mt-1">
-                                    <input type="number" class="form-control prix-input" 
+                                <div class="input-group mt-1" style="display: <?= $isChecked ? 'flex' : 'none' ?>;">
+                                    <input type="number" class="form-control" 
                                            name="prix_<?= $vehicule['id'] ?>" 
                                            placeholder="Prix" 
                                            step="0.01" 
-                                           disabled>
+                                           min="0"
+                                           value="<?= number_format($prix, 2, '.', '') ?>"
+                                           <?= $isChecked ? '' : 'disabled' ?>>
                                     <span class="input-group-text">€</span>
                                 </div>
                             </div>
@@ -262,13 +264,46 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
     if ($option):
         $option['vehicules_ids'] = $option['vehicules_ids'] ? explode(',', $option['vehicules_ids']) : [];
     ?>
+    <script>
+    function togglePrixInput(checkbox) {
+        const prixInput = checkbox.parentElement.nextElementSibling.querySelector('input');
+        const prixInputGroup = checkbox.parentElement.nextElementSibling;
+        if (prixInput && prixInputGroup) {
+            prixInput.disabled = !checkbox.checked;
+            prixInputGroup.style.display = checkbox.checked ? 'flex' : 'none';
+        }
+    }
+
+    function updateOption(event, optionId) {
+        event.preventDefault();
+        const form = document.getElementById(`editOptionForm${optionId}`);
+        const formData = new FormData(form);
+
+        fetch('update-option.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = 'options.php?success=edit';
+            } else {
+                alert('Erreur lors de la modification : ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Erreur lors de la modification : ' + error);
+        });
+
+        return false;
+    }
+    </script>
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">Modifier l'option</h3>
         </div>
         <div class="card-body">
-            <form method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="action" value="edit">
+            <form id="editOptionForm<?= $option['id'] ?>" onsubmit="return updateOption(event, <?= $option['id'] ?>)" enctype="multipart/form-data">
                 <input type="hidden" name="id" value="<?= $option['id'] ?>">
                 
                 <div class="mb-3">
@@ -288,6 +323,7 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
                             $stmt = $pdo->prepare("SELECT prix FROM option_vehicule_compatibilite WHERE id_option = ? AND id_vehicule = ?");
                             $stmt->execute([$option['id'], $vehicule['id']]);
                             $prix = $stmt->fetchColumn();
+                            $isChecked = in_array($vehicule['id'], $option['vehicules_ids']);
                         ?>
                             <div class="col-md-6 mb-2">
                                 <div class="form-check">
@@ -295,19 +331,20 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
                                            id="vehicule_<?= $vehicule['id'] ?>" 
                                            name="vehicules[]" 
                                            value="<?= $vehicule['id'] ?>"
-                                           <?= in_array($vehicule['id'], $option['vehicules_ids']) ? 'checked' : '' ?>
-                                           onchange="togglePrixInput(this)">
+                                           onchange="togglePrixInput(this)"
+                                           <?= $isChecked ? 'checked' : '' ?>>
                                     <label class="form-check-label" for="vehicule_<?= $vehicule['id'] ?>">
                                         <?= htmlspecialchars($vehicule['nom']) ?>
                                     </label>
                                 </div>
-                                <div class="input-group mt-1">
-                                    <input type="number" class="form-control prix-input" 
+                                <div class="input-group mt-1" style="display: <?= $isChecked ? 'flex' : 'none' ?>;">
+                                    <input type="number" class="form-control" 
                                            name="prix_<?= $vehicule['id'] ?>" 
                                            placeholder="Prix" 
                                            step="0.01" 
-                                           value="<?= $prix ?>"
-                                           <?= in_array($vehicule['id'], $option['vehicules_ids']) ? '' : 'disabled' ?>>
+                                           min="0"
+                                           value="<?= number_format($prix, 2, '.', '') ?>"
+                                           <?= $isChecked ? '' : 'disabled' ?>>
                                     <span class="input-group-text">€</span>
                                 </div>
                             </div>
@@ -436,16 +473,10 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
                                 <i class="bi bi-pencil"></i>
                             </a>
                             <button type="button" class="btn btn-sm btn-danger" title="Supprimer"
-                                    onclick="if(confirm('Êtes-vous sûr de vouloir supprimer cette option ?')) { 
-                                        document.getElementById('delete-form-<?= $option['id'] ?>').submit(); 
-                                    }">
+                                    onclick="deleteOption(<?= $option['id'] ?>)">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
-                        <form id="delete-form-<?= $option['id'] ?>" method="POST" style="display: none;">
-                            <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="id" value="<?= $option['id'] ?>">
-                        </form>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -489,6 +520,92 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
     transform: scale(1.1);
 }
 </style>
+
+<script>
+// Attendre que le DOM soit complètement chargé
+window.addEventListener('load', function() {
+    // Gestion des checkboxes de véhicules
+    const checkboxes = document.querySelectorAll('.vehicule-check');
+    checkboxes.forEach(checkbox => {
+        // Initialiser l'état initial
+        const prixInput = checkbox.parentElement.nextElementSibling.querySelector('input');
+        const prixInputGroup = checkbox.parentElement.nextElementSibling;
+        if (prixInput && prixInputGroup) {
+            prixInput.disabled = !checkbox.checked;
+            prixInputGroup.style.display = checkbox.checked ? 'flex' : 'none';
+        }
+
+        // Ajouter l'écouteur d'événement
+        checkbox.addEventListener('change', function() {
+            const prixInput = this.parentElement.nextElementSibling.querySelector('input');
+            const prixInputGroup = this.parentElement.nextElementSibling;
+            if (prixInput && prixInputGroup) {
+                prixInput.disabled = !this.checked;
+                prixInputGroup.style.display = this.checked ? 'flex' : 'none';
+            }
+        });
+    });
+
+    // Gestion des modals
+    const modals = document.querySelectorAll('.modal');
+    let lastFocusedElement = null;
+
+    modals.forEach(modal => {
+        modal.addEventListener('show.bs.modal', function() {
+            lastFocusedElement = document.activeElement;
+            
+            const focusableElements = document.querySelectorAll(
+                'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            );
+            
+            focusableElements.forEach(element => {
+                if (!modal.contains(element)) {
+                    element.setAttribute('tabindex', '-1');
+                }
+            });
+        });
+
+        modal.addEventListener('hidden.bs.modal', function() {
+            if (lastFocusedElement) {
+                lastFocusedElement.focus();
+            }
+            
+            const focusableElements = document.querySelectorAll(
+                'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            );
+            
+            focusableElements.forEach(element => {
+                if (!modal.contains(element)) {
+                    element.removeAttribute('tabindex');
+                }
+            });
+        });
+    });
+});
+
+function deleteOption(optionId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette option ?')) {
+        fetch('delete-option.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: optionId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = 'options.php?success=delete';
+            } else {
+                alert('Erreur lors de la suppression : ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Erreur lors de la suppression : ' + error);
+        });
+    }
+}
+</script>
 
 <?php endif; ?>
 <?php require 'footer.php'; ?> 

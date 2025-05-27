@@ -288,8 +288,7 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
             <h3 class="card-title">Modifier le kit</h3>
         </div>
         <div class="card-body">
-            <form method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="action" value="edit">
+            <form id="editKitForm<?= $kit['id'] ?>" onsubmit="return updateKit(event, <?= $kit['id'] ?>)" enctype="multipart/form-data">
                 <input type="hidden" name="id" value="<?= $kit['id'] ?>">
                 
                 <div class="mb-3">
@@ -514,64 +513,149 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
 
 <script>
 function togglePrixInput(checkbox) {
-    const prixInput = checkbox.closest('.col-md-6').querySelector('.prix-input');
-    const prixInputField = prixInput.querySelector('input');
-    
-    if (checkbox.checked) {
-        prixInput.style.display = 'flex';
-        prixInputField.disabled = false;
-        prixInputField.required = true;
-        if (!prixInputField.value || prixInputField.value === '') {
-            prixInputField.value = '0.00';
-        }
-    } else {
-        prixInput.style.display = 'none';
-        prixInputField.disabled = true;
-        prixInputField.required = false;
-        prixInputField.value = '0.00';
+    const prixInput = checkbox.parentElement.nextElementSibling.querySelector('input');
+    prixInput.disabled = !checkbox.checked;
+}
+
+function deleteKit(kitId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce kit ?')) {
+        fetch('delete-kit.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: kitId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erreur lors de la suppression : ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Erreur lors de la suppression : ' + error);
+        });
     }
 }
 
-// Initialiser les champs de prix au chargement de la page
+function updateKit(event, kitId) {
+    event.preventDefault();
+    const form = document.getElementById(`editKitForm${kitId}`);
+    const formData = new FormData(form);
+
+    fetch('update-kit.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Fermer le modal
+            const modalElement = document.getElementById(`editKitModal${kitId}`);
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
+            // Rediriger vers kits.php
+            window.location.href = 'kits.php?success=edit';
+        } else {
+            alert('Erreur lors de la modification : ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Erreur lors de la modification : ' + error);
+    });
+
+    return false;
+}
+
+// Gestion des modals
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.vehicule-check').forEach(checkbox => {
-        const prixInput = checkbox.closest('.col-md-6').querySelector('.prix-input');
-        const prixInputField = prixInput.querySelector('input');
-        if (!prixInputField.value || prixInputField.value === '') {
-            prixInputField.value = '0.00';
-        }
-        if (checkbox.checked) {
-            togglePrixInput(checkbox);
-        }
+    const modals = document.querySelectorAll('.modal');
+    let lastFocusedElement = null;
+
+    modals.forEach(modal => {
+        modal.addEventListener('show.bs.modal', function() {
+            lastFocusedElement = document.activeElement;
+            
+            const focusableElements = document.querySelectorAll(
+                'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            );
+            
+            focusableElements.forEach(element => {
+                if (!modal.contains(element)) {
+                    element.setAttribute('tabindex', '-1');
+                }
+            });
+        });
+
+        modal.addEventListener('hidden.bs.modal', function() {
+            if (lastFocusedElement) {
+                lastFocusedElement.focus();
+            }
+            
+            const focusableElements = document.querySelectorAll(
+                'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="-1"]'
+            );
+            
+            focusableElements.forEach(element => {
+                if (!modal.contains(element)) {
+                    element.removeAttribute('tabindex');
+                }
+            });
+        });
+
+        modal.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+            }
+        });
+
+        modal.addEventListener('shown.bs.modal', function() {
+            const focusableElements = modal.querySelectorAll(
+                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            );
+            if (focusableElements.length > 0) {
+                focusableElements[0].focus();
+            }
+        });
     });
 });
 
-document.querySelectorAll('.delete-image').forEach(button => {
-    button.addEventListener('click', function() {
-        if (confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) {
-            const id = this.dataset.id;
+// Gestion de la suppression des images
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.delete-image').forEach(button => {
+        button.addEventListener('click', function() {
+            const imageId = this.dataset.id;
             const type = this.dataset.type;
             
-            fetch('delete_image.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `image_id=${id}&type=${type}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    this.closest('.col-auto').remove();
-                } else {
-                    alert('Erreur lors de la suppression de l\'image');
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                alert('Erreur lors de la suppression de l\'image');
-            });
-        }
+            if (confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) {
+                fetch('delete-image.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ id: imageId, type: type })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Supprimer l'élément de l'interface
+                        this.closest('.col-auto').remove();
+                    } else {
+                        alert('Erreur lors de la suppression : ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Erreur lors de la suppression : ' + error);
+                });
+            }
+        });
     });
 });
 </script>

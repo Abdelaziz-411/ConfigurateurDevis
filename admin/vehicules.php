@@ -163,13 +163,37 @@ foreach ($vehicules as &$vehicule) {
     
     if ($vehicule):
     ?>
+    <script>
+    function updateVehicule(event, vehiculeId) {
+        event.preventDefault();
+        const form = document.getElementById(`editVehiculeForm${vehiculeId}`);
+        const formData = new FormData(form);
+
+        fetch('update-vehicule.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = 'vehicules.php?success=edit';
+            } else {
+                alert('Erreur lors de la modification : ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Erreur lors de la modification : ' + error);
+        });
+
+        return false;
+    }
+    </script>
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">Modifier le véhicule</h3>
         </div>
         <div class="card-body">
-            <form method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="action" value="edit">
+            <form id="editVehiculeForm<?= $vehicule['id'] ?>" onsubmit="return updateVehicule(event, <?= $vehicule['id'] ?>)" enctype="multipart/form-data">
                 <input type="hidden" name="id" value="<?= $vehicule['id'] ?>">
                 
                 <div class="mb-3">
