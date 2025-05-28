@@ -387,180 +387,39 @@ document.addEventListener('DOMContentLoaded', function() {
     // Créer une carte de kit
     function createKitCard(kit) {
         const card = document.createElement('div');
-        card.className = 'col-md-6 col-lg-4';
-        
-        // Créer une version courte de la description (150 caractères)
-        const shortDesc = kit.description.length > 150 
-            ? kit.description.substring(0, 150) + '...'
-            : kit.description;
-
-        const isSelected = selectedKit && selectedKit.id === kit.id;
-        
+        card.className = 'col-md-6 col-lg-4 mb-4';
         card.innerHTML = `
-            <div class="card h-100 kit-card ${isSelected ? 'border-primary' : ''}" data-id="${kit.id}">
-                <div id="kitCarousel${kit.id}" class="carousel slide" data-bs-ride="carousel">
-                    <div class="carousel-inner">
-                        ${kit.images && kit.images.length > 0 
-                            ? kit.images.map((image, index) => `
-                            <div class="carousel-item ${index === 0 ? 'active' : ''}">
+            <div class="card h-100">
+                ${kit.images && kit.images.length > 0 
+                    ? `<div id="kitCarousel${kit.id}" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner">
+                            ${kit.images.map((image, index) => `
+                                <div class="carousel-item ${index === 0 ? 'active' : ''}">
                                     <img src="${image}" class="card-img-top" alt="${kit.nom}">
-                            </div>
-                            `).join('')
-                            : `<div class="carousel-item active">
-                                <img src="images/kits/default.jpg" class="card-img-top" alt="${kit.nom}">
-                            </div>`
-                        }
-                    </div>
-                    ${kit.images && kit.images.length > 1 ? `
-                        <button class="carousel-control-prev" type="button" data-bs-target="#kitCarousel${kit.id}" data-bs-slide="prev">
-                            <span class="carousel-control-prev-icon"></span>
-                        </button>
-                        <button class="carousel-control-next" type="button" data-bs-target="#kitCarousel${kit.id}" data-bs-slide="next">
-                            <span class="carousel-control-next-icon"></span>
-                        </button>
-                    ` : ''}
-                </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        ${kit.images.length > 1 ? `
+                            <button class="carousel-control-prev" type="button" data-bs-target="#kitCarousel${kit.id}" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon"></span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#kitCarousel${kit.id}" data-bs-slide="next">
+                                <span class="carousel-control-next-icon"></span>
+                            </button>
+                        ` : ''}
+                    </div>`
+                    : `<img src="images/kits/default.jpg" class="card-img-top" alt="${kit.nom}">`
+                }
                 <div class="card-body">
                     <h5 class="card-title">${kit.nom}</h5>
-                    <p class="card-text description-preview">${shortDesc}</p>
-                    ${kit.description.length > 150 
-                        ? `<button type="button" class="btn btn-link p-0 voir-plus" data-bs-toggle="modal" data-bs-target="#kitModal${kit.id}">
-                            Voir plus <i class="bi bi-arrow-right"></i>
-                           </button>` 
-                        : ''
-                    }
-                    <p class="card-text mt-2">
-                        <strong>Prix : ${formatPrix(kit.prix)}</strong>
-                    </p>
-                </div>
-                <div class="card-footer bg-transparent">
-                    <button class="btn ${isSelected ? 'btn-danger' : 'btn-primary'} w-100 select-kit" data-id="${kit.id}" data-prix="${kit.prix}">
-                        ${isSelected ? 'Désélectionner' : 'Sélectionner'}
-                    </button>
-                </div>
-            </div>
-
-            ${kit.description.length > 150 ? `
-                <div class="modal fade" id="kitModal${kit.id}" tabindex="-1">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">${kit.nom}</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div id="kitModalCarousel${kit.id}" class="carousel slide" data-bs-ride="carousel">
-                                            <div class="carousel-inner">
-                                                ${kit.images && kit.images.length > 0 
-                                                    ? kit.images.map((image, index) => `
-                                                        <div class="carousel-item ${index === 0 ? 'active' : ''}">
-                                                            <img src="${image}" class="img-fluid rounded" alt="${kit.nom}">
-                                                        </div>
-                                                    `).join('')
-                                                    : `<div class="carousel-item active">
-                                                        <img src="images/kits/default.jpg" class="img-fluid rounded" alt="${kit.nom}">
-                                                    </div>`
-                                                }
-                                            </div>
-                                            ${kit.images && kit.images.length > 1 ? `
-                                                <button class="carousel-control-prev" type="button" data-bs-target="#kitModalCarousel${kit.id}" data-bs-slide="prev">
-                                                    <span class="carousel-control-prev-icon"></span>
-                                                </button>
-                                                <button class="carousel-control-next" type="button" data-bs-target="#kitModalCarousel${kit.id}" data-bs-slide="next">
-                                                    <span class="carousel-control-next-icon"></span>
-                                                </button>
-                                            ` : ''}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <h6 class="mb-3">Description détaillée :</h6>
-                                        <p style="white-space: pre-line;">${kit.description}</p>
-                                        <p class="mt-3">
-                                            <strong>Prix : ${formatPrix(kit.prix)}</strong>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                                <button type="button" class="btn ${isSelected ? 'btn-danger' : 'btn-primary'} select-kit-modal" data-id="${kit.id}" data-prix="${kit.prix}" data-bs-dismiss="modal">
-                                    ${isSelected ? 'Désélectionner' : 'Sélectionner ce kit'}
-                                </button>
-                            </div>
-                        </div>
+                    <p class="card-text">${kit.description}</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="h5 mb-0">${kit.prix.toFixed(2)} € TTC</span>
+                        <button class="btn btn-primary" onclick="selectKit(${kit.id})">Sélectionner</button>
                     </div>
                 </div>
-            ` : ''}
+            </div>
         `;
-
-        // Ajouter les gestionnaires d'événements pour les boutons de sélection
-        const selectButtons = card.querySelectorAll('.select-kit, .select-kit-modal');
-        selectButtons.forEach(button => {
-            button.addEventListener('click', function() {
-            const kitId = this.dataset.id;
-                const prix = parseFloat(this.dataset.prix);
-                const isCurrentlySelected = selectedKit && selectedKit.id === kitId;
-
-                if (isCurrentlySelected) {
-                // Désélection du kit
-                selectedKit = null;
-                    kitPrix = 0;
-
-                    // Réinitialiser l'apparence du bouton
-                    document.querySelectorAll(`.kit-card[data-id="${kitId}"]`).forEach(k => {
-                        k.classList.remove('border-primary');
-                        const selectBtn = k.querySelector('button.select-kit');
-                        selectBtn.classList.remove('btn-danger');
-                        selectBtn.classList.add('btn-primary');
-                        selectBtn.textContent = 'Sélectionner';
-                    });
-
-                    // Masquer la section des options et réinitialiser les options
-                    document.getElementById('step-options').style.display = 'none';
-                    selectedOptions = new Set();
-                    const optionsContainer = document.querySelector('.option-container');
-                    if (optionsContainer) {
-                        optionsContainer.innerHTML = '';
-                    }
-                } else {
-                    // Réinitialiser tous les kits
-                    document.querySelectorAll('.kit-card').forEach(k => {
-                        k.classList.remove('border-primary');
-                        const selectBtn = k.querySelector('button.select-kit');
-                        selectBtn.classList.remove('btn-danger');
-                        selectBtn.classList.add('btn-primary');
-                        selectBtn.textContent = 'Sélectionner';
-                    });
-
-                    // Sélection du nouveau kit
-                    selectedKit = { id: kitId, prix: prix };
-                    kitPrix = prix;
-
-                    // Mettre en évidence le kit sélectionné
-                    const selectedCard = document.querySelector(`.kit-card[data-id="${kitId}"]`);
-                    selectedCard.classList.add('border-primary');
-                    const selectBtn = selectedCard.querySelector('button.select-kit');
-                    selectBtn.classList.remove('btn-primary');
-                    selectBtn.classList.add('btn-danger');
-                    selectBtn.textContent = 'Désélectionner';
-
-                    // Afficher la section des options
-                    document.getElementById('step-options').style.display = 'block';
-
-                    // Charger les options compatibles
-                    loadOptions(selectedVehicule);
-                }
-
-                // Mettre à jour le récapitulatif
-                updateRecap();
-
-                // Sauvegarder la configuration
-                saveConfiguration();
-            });
-        });
-
         return card;
     }
 
@@ -648,44 +507,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Gestion du formulaire de devis
     const btnDemandeDevis = document.getElementById('btnDemandeDevis');
-    const devisModal = new bootstrap.Modal(document.getElementById('devisModal'));
+    const devisModal = new bootstrap.Modal(document.getElementById('devisModal'), {
+        keyboard: true,
+        backdrop: 'static'
+    });
     const btnEnvoyerDevis = document.getElementById('btnEnvoyerDevis');
+
+    // Ajouter un écouteur pour la fermeture du modal
+    devisModal._element.addEventListener('hidden.bs.modal', function (e) {
+        // Réinitialiser le formulaire
+        document.getElementById('formDevis').reset();
+    });
     const formDevis = document.getElementById('formDevis');
-    let lastFocusedElement = null;
-    const modalElement = document.getElementById('devisModal');
-    const mainContent = document.querySelector('main') || document.body;
 
     btnDemandeDevis.addEventListener('click', () => {
         if (!selectedVehicule) {
             alert('Veuillez sélectionner un véhicule');
             return;
         }
-        lastFocusedElement = document.activeElement;
-        mainContent.setAttribute('inert', '');
-        modalElement.removeAttribute('inert');
         devisModal.show();
     });
 
-    // Gestion du focus lors de l'ouverture du modal
-    modalElement.addEventListener('shown.bs.modal', function () {
-        document.getElementById('nom').focus();
-    });
-
-    // Gestion du focus lors de la fermeture du modal
-    modalElement.addEventListener('hidden.bs.modal', function () {
-        mainContent.removeAttribute('inert');
-        modalElement.setAttribute('inert', '');
-        if (lastFocusedElement) {
-            lastFocusedElement.focus();
-        }
-    });
-
-    // Gestion de la touche Escape
-    modalElement.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            mainContent.removeAttribute('inert');
-            modalElement.setAttribute('inert', '');
-        }
+    // Met le focus sur le champ "Nom" à l'ouverture du modal (si le champ existe)
+    document.getElementById('devisModal').addEventListener('shown.bs.modal', function () {
+        const nomInput = document.getElementById('nom');
+        if (nomInput) nomInput.focus();
     });
 
     btnEnvoyerDevis.addEventListener('click', async () => {
@@ -695,14 +541,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const formData = {
-            nom: document.getElementById('nom').value,
-            prenom: document.getElementById('prenom').value,
-            email: document.getElementById('email').value,
-            telephone: document.getElementById('telephone').value,
-            message: document.getElementById('message').value,
+            nom: document.getElementById('nom')?.value || '',
+            prenom: document.getElementById('prenom')?.value || '',
+            email: document.getElementById('email')?.value || '',
+            telephone: document.getElementById('telephone')?.value || '',
+            message: document.getElementById('message')?.value || '',
             vehicule_id: selectedVehicule,
             kit_id: selectedKit ? selectedKit.id : null,
-            configuration: document.getElementById('recap-details').innerText,
+            configuration: document.getElementById('recap-details')?.innerText || '',
             prix_ht: total,
             prix_ttc: calculerPrixTTC(total)
         };
@@ -722,7 +568,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
 
             if (data.success) {
-                devisModal.hide();
+                // Toujours recréer l'instance du modal pour garantir la fermeture
+                const modalElement = document.getElementById('devisModal');
+                const modalInstance = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+                modalInstance.hide();
                 formDevis.reset();
                 alert('Votre demande de devis a été envoyée avec succès. Nous vous contacterons prochainement.');
             } else {
