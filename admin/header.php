@@ -10,6 +10,7 @@ require '../config.php';
     <title>Administration - Configurateur</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="admin-style.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         body {
@@ -208,13 +209,15 @@ require '../config.php';
             <a href="kits.php" <?php echo basename($_SERVER['PHP_SELF']) == 'kits.php' ? 'class="active"' : ''; ?>>
                 <i class="bi bi-box"></i> Kits
             </a>
-            <a href="options.php" <?php echo basename($_SERVER['PHP_SELF']) == 'options.php' ? 'class="active"' : ''; ?>>
+            <a href="options.php" <?php echo basename($_SERVER['PHP_SELF']) == 'options.php' ? 'class="active"' : ''; ?> >
                 <i class="bi bi-gear"></i> Options
             </a>
-            <a href="gestion_images.php" <?php echo basename($_SERVER['PHP_SELF']) == 'gestion_images.php' ? 'class="active"' : ''; ?>>
+<?php /*
+            <a href="gestion_images.php" <?php echo basename($_SERVER['PHP_SELF']) == 'gestion_images.php' ? 'class="active"' : ''; ?> >
                 <i class="bi bi-images"></i> Gestion des Images
             </a>
-            <a href="devis.php" <?php echo basename($_SERVER['PHP_SELF']) == 'devis.php' ? 'class="active"' : ''; ?>>
+*/ ?>
+            <a href="devis.php" <?php echo basename($_SERVER['PHP_SELF']) == 'devis.php' ? 'class="active"' : ''; ?> >
                 <i class="bi bi-file-earmark-text"></i> Devis
             </a>
             <a href="../" target="_blank">

@@ -216,21 +216,19 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
                                     <input type="checkbox" class="form-check-input vehicule-check" 
                                            id="vehicule_<?= $vehicule['id'] ?>" 
                                            name="vehicules[]" 
-                                           value="<?= $vehicule['id'] ?>"
-                                           <?= $isChecked ? 'checked' : '' ?>>
+                                           value="<?= $vehicule['id'] ?>">
                                     <label class="form-check-label" for="vehicule_<?= $vehicule['id'] ?>">
                                         <?= htmlspecialchars($vehicule['nom']) ?>
                                     </label>
                                 </div>
-                                <div class="input-group mt-1" style="display: <?= $isChecked ? 'flex' : 'none' ?>;">
-                                    <input type="number" class="form-control" 
+                                <div class="input-group mt-1 prix-input" id="prix_group_<?= $vehicule['id'] ?>" style="display: none;">
+                                    <input type="number" class="form-control prix-input-field" 
+                                           id="prix_<?= $vehicule['id'] ?>"
                                            name="prix_<?= $vehicule['id'] ?>" 
-                                           placeholder="Prix" 
+                                           placeholder="Prix TTC" 
                                            step="0.01" 
-                                           min="0"
-                                           value="<?= number_format($prix, 2, '.', '') ?>"
-                                           <?= $isChecked ? '' : 'disabled' ?>>
-                                    <span class="input-group-text">€</span>
+                                           disabled>
+                                    <span class="input-group-text">€ TTC</span>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -249,6 +247,36 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
             </form>
         </div>
     </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Fonction pour gérer l'affichage des champs de prix
+        function togglePrixInput(checkbox) {
+            const vehiculeId = checkbox.value;
+            const prixGroup = document.getElementById('prix_group_' + vehiculeId);
+            const prixInput = document.getElementById('prix_' + vehiculeId);
+            
+            if (prixGroup && prixInput) {
+                prixInput.disabled = !checkbox.checked;
+                prixGroup.style.display = checkbox.checked ? 'flex' : 'none';
+            }
+        }
+
+        // Ajouter les écouteurs d'événements aux checkboxes
+        const checkboxes = document.querySelectorAll('.vehicule-check');
+        checkboxes.forEach(checkbox => {
+            // Initialiser l'état des champs de prix pour les checkboxes cochées
+            if (checkbox.checked) {
+                togglePrixInput(checkbox);
+            }
+            
+            // Ajouter l'écouteur d'événement pour les changements futurs
+            checkbox.addEventListener('change', function() {
+                togglePrixInput(this);
+            });
+        });
+    });
+    </script>
 <?php elseif (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])): ?>
     <?php
     $stmt = $pdo->prepare("
@@ -264,40 +292,6 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
     if ($option):
         $option['vehicules_ids'] = $option['vehicules_ids'] ? explode(',', $option['vehicules_ids']) : [];
     ?>
-    <script>
-    function togglePrixInput(checkbox) {
-        const prixInput = checkbox.parentElement.nextElementSibling.querySelector('input');
-        const prixInputGroup = checkbox.parentElement.nextElementSibling;
-        if (prixInput && prixInputGroup) {
-            prixInput.disabled = !checkbox.checked;
-            prixInputGroup.style.display = checkbox.checked ? 'flex' : 'none';
-        }
-    }
-
-    function updateOption(event, optionId) {
-        event.preventDefault();
-        const form = document.getElementById(`editOptionForm${optionId}`);
-        const formData = new FormData(form);
-
-        fetch('update-option.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.location.href = 'options.php?success=edit';
-            } else {
-                alert('Erreur lors de la modification : ' + data.message);
-            }
-        })
-        .catch(error => {
-            alert('Erreur lors de la modification : ' + error);
-        });
-
-        return false;
-    }
-    </script>
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">Modifier l'option</h3>
@@ -331,21 +325,20 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
                                            id="vehicule_<?= $vehicule['id'] ?>" 
                                            name="vehicules[]" 
                                            value="<?= $vehicule['id'] ?>"
-                                           onchange="togglePrixInput(this)"
                                            <?= $isChecked ? 'checked' : '' ?>>
                                     <label class="form-check-label" for="vehicule_<?= $vehicule['id'] ?>">
                                         <?= htmlspecialchars($vehicule['nom']) ?>
                                     </label>
                                 </div>
-                                <div class="input-group mt-1" style="display: <?= $isChecked ? 'flex' : 'none' ?>;">
-                                    <input type="number" class="form-control" 
+                                <div class="input-group mt-1 prix-input" id="prix_group_<?= $vehicule['id'] ?>" style="display: <?= $isChecked ? 'flex' : 'none' ?>;">
+                                    <input type="number" class="form-control prix-input-field" 
+                                           id="prix_<?= $vehicule['id'] ?>"
                                            name="prix_<?= $vehicule['id'] ?>" 
-                                           placeholder="Prix" 
+                                           placeholder="Prix TTC" 
                                            step="0.01" 
-                                           min="0"
                                            value="<?= number_format($prix, 2, '.', '') ?>"
                                            <?= $isChecked ? '' : 'disabled' ?>>
-                                    <span class="input-group-text">€</span>
+                                    <span class="input-group-text">€ TTC</span>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -389,6 +382,60 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
             </form>
         </div>
     </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Fonction pour gérer l'affichage des champs de prix
+        function togglePrixInput(checkbox) {
+            const vehiculeId = checkbox.value;
+            const prixGroup = document.getElementById('prix_group_' + vehiculeId);
+            const prixInput = document.getElementById('prix_' + vehiculeId);
+            
+            if (prixGroup && prixInput) {
+                prixInput.disabled = !checkbox.checked;
+                prixGroup.style.display = checkbox.checked ? 'flex' : 'none';
+            }
+        }
+
+        // Ajouter les écouteurs d'événements aux checkboxes
+        const checkboxes = document.querySelectorAll('.vehicule-check');
+        checkboxes.forEach(checkbox => {
+            // Initialiser l'état des champs de prix pour les checkboxes cochées
+            if (checkbox.checked) {
+                togglePrixInput(checkbox);
+            }
+            
+            // Ajouter l'écouteur d'événement pour les changements futurs
+            checkbox.addEventListener('change', function() {
+                togglePrixInput(this);
+            });
+        });
+    });
+
+    function updateOption(event, optionId) {
+        event.preventDefault();
+        const form = document.getElementById(`editOptionForm${optionId}`);
+        const formData = new FormData(form);
+
+        fetch('update-option.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = 'options.php?success=edit';
+            } else {
+                alert('Erreur lors de la modification : ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Erreur lors de la modification : ' + error);
+        });
+
+        return false;
+    }
+    </script>
     <?php endif; ?>
 <?php else: ?>
     <div class="table-responsive">

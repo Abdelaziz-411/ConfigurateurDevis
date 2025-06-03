@@ -86,7 +86,7 @@ CREATE TABLE `kits` (
   `id` int NOT NULL,
   `nom` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
-  `prix` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `prix` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT 'Prix TTC',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -114,7 +114,7 @@ DROP TABLE IF EXISTS `kit_vehicule_compatibilite`;
 CREATE TABLE `kit_vehicule_compatibilite` (
   `id_kit` int NOT NULL,
   `id_vehicule` int NOT NULL,
-  `prix` decimal(10,2) NOT NULL DEFAULT '0.00'
+  `prix` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT 'Prix TTC'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
@@ -129,7 +129,7 @@ CREATE TABLE `options` (
   `id_categorie` int DEFAULT NULL,
   `nom` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
-  `prix` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `prix` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT 'Prix TTC',
   `unite` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `modifiable` tinyint(1) DEFAULT '1',
@@ -161,7 +161,7 @@ DROP TABLE IF EXISTS `option_vehicule_compatibilite`;
 CREATE TABLE `option_vehicule_compatibilite` (
   `id_option` int NOT NULL,
   `id_vehicule` int NOT NULL,
-  `prix` decimal(10,2) NOT NULL DEFAULT '0.00'
+  `prix` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT 'Prix TTC'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------

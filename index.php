@@ -136,6 +136,9 @@ $vehicules = $pdo->query("SELECT * FROM vehicules ORDER BY nom")->fetchAll(PDO::
                     <button class="btn btn-success w-100" id="btnDemandeDevis">
                         Demander un devis
                     </button>
+                    <button class="btn btn-secondary w-100 mt-2" id="btnResetConfig">
+                        Réinitialiser
+                    </button>
                 </div>
             </div>
         </div>

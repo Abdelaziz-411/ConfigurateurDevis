@@ -15,6 +15,16 @@ document.addEventListener('DOMContentLoaded', function() {
     let total = 0;
     const TVA = 0.20; // TVA à 20%
 
+    // Rendre les variables et fonctions accessibles globalement
+    window.kitPrix = kitPrix;
+    window.selectedVehicule = selectedVehicule;
+    window.selectedKit = selectedKit;
+    window.selectedOptions = selectedOptions;
+    window.total = total;
+    window.TVA = TVA;
+    window.selectKit = selectKit; // Rendre selectKit accessible globalement
+
+
     // Fonctions de sauvegarde de la configuration
     function saveConfiguration() {
         const config = {
@@ -24,6 +34,46 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         localStorage.setItem('configurateur-state', JSON.stringify(config));
     }
+    window.saveConfiguration = saveConfiguration;
+
+    // Fonction pour sélectionner un kit
+    function selectKit(kitId, prix) {
+        console.log('Kit sélectionné:', { id: kitId, prix: prix });
+
+        // Si le kit cliqué est déjà sélectionné, on le désélectionne
+        if (selectedKit && selectedKit.id === kitId) {
+            document.querySelectorAll('.kit-card').forEach(card => {
+                card.classList.remove('border-primary');
+            });
+            selectedKit = null;
+            kitPrix = 0;
+            updateRecap();
+            saveConfiguration();
+            console.log('Kit désélectionné. selectedKit est maintenant :', selectedKit);
+            return;
+        }
+
+        // Désélectionner tous les kits
+        document.querySelectorAll('.kit-card').forEach(card => {
+            card.classList.remove('border-primary');
+        });
+
+        // Sélectionner le kit choisi
+        const selectedCard = document.querySelector(`.kit-card[data-id="${kitId}"]`);
+        if (selectedCard) {
+            console.log('Carte du kit trouvée, mise à jour de l\'interface');
+            selectedCard.classList.add('border-primary');
+            selectedKit = {
+                id: kitId,
+                prix: prix
+            };
+            kitPrix = prix;
+            updateRecap();
+            saveConfiguration();
+        } else {
+            console.error('Carte du kit non trouvée pour l\'ID:', kitId);
+        }
+    }
 
     // Fonction de restauration de la configuration
     async function loadConfiguration() {
@@ -31,7 +81,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (savedConfig) {
             try {
                 const config = JSON.parse(savedConfig);
-                
+
                 // Restaurer la sélection du véhicule
                 if (config.vehicule) {
                     const vehiculeCard = document.querySelector(`.vehicule-card[data-id="${config.vehicule}"]`);
@@ -39,31 +89,33 @@ document.addEventListener('DOMContentLoaded', function() {
                         selectedVehicule = config.vehicule;
                         vehiculeCards.forEach(c => c.classList.remove('border-primary'));
                         vehiculeCard.classList.add('border-primary');
-                        
+
                         // Réinitialiser les sélections précédentes
                         selectedKit = null;
                         kitPrix = 0;
                         selectedOptions = new Set();
-                        
+
                         // Afficher les sections
                         document.getElementById('step-kit').style.display = 'block';
                         document.getElementById('step-options').style.display = 'block';
-                        
+
                         // Charger les kits et options pour ce véhicule
                         await loadKits(config.vehicule);
                         await loadOptions(config.vehicule);
-                        
+
                         // Une fois que les kits et options sont chargés, on peut restaurer les sélections
                         if (config.kit) {
                             const kitCard = document.querySelector(`.kit-card[data-id="${config.kit.id}"]`);
                             if (kitCard) {
-                                const selectButton = kitCard.querySelector('.select-kit');
-                                if (selectButton) {
-                                    selectButton.click();
+                                // Utiliser directement la fonction selectKit si elle est chargée
+                                if (typeof selectKit === 'function') {
+                                     selectKit(config.kit.id, config.kit.prix);
+                                } else {
+                                    console.error('La fonction selectKit n\'est pas encore disponible.');
                                 }
                             }
                         }
-                        
+
                         if (config.options && Array.isArray(config.options)) {
                             config.options.forEach(savedOption => {
                                 const optionCard = document.querySelector(`.option-card[data-id="${savedOption.id}"]`);
@@ -71,12 +123,14 @@ document.addEventListener('DOMContentLoaded', function() {
                                     const checkbox = optionCard.querySelector('.option-checkbox');
                                     if (checkbox) {
                                         checkbox.checked = true;
-                                        checkbox.dispatchEvent(new Event('change'));
+                                        // Déclencher l'événement change manuellement
+                                        const event = new Event('change');
+                                        checkbox.dispatchEvent(event);
                                     }
                                 }
                             });
                         }
-                        
+
                         // Mettre à jour l'affichage
                         updateRecap();
                         updateTotal();
@@ -104,8 +158,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Fonction pour formater le prix
     function formatPrix(prix, isTTC = true) {
         const valeur = isTTC ? calculerPrixTTC(prix) : prix;
-        return `${valeur.toFixed(2)} € ${isTTC ? 'TTC' : 'HT'}`;
+        return `${valeur.toFixed(2).replace('.', ',')} € ${isTTC ? 'TTC' : 'HT'}`;
     }
+
 
     // Écouter le changement de switch HT/TTC
     prixTTCSwitch.addEventListener('change', function() {
@@ -125,89 +180,90 @@ document.addEventListener('DOMContentLoaded', function() {
             // Réinitialiser le récapitulatif
             html = '';
 
-        // Ajouter le véhicule
-        if (selectedVehicule) {
-            const vehiculeCard = document.querySelector(`.vehicule-card[data-id="${selectedVehicule}"]`);
+            // Ajouter le véhicule
+            if (selectedVehicule) {
+                const vehiculeCard = document.querySelector(`.vehicule-card[data-id="${selectedVehicule}"]`);
                 if (vehiculeCard) {
                     const vehiculeNom = vehiculeCard.querySelector('.card-title')?.textContent || 'Véhicule sélectionné';
-            html += `
-                <div class="recap-section">
-                    <h4>Véhicule</h4>
-                    <p>${vehiculeNom}</p>
-                </div>
-            `;
+                    html += `
+                        <div class="recap-section">
+                            <h4>Véhicule</h4>
+                            <p>${vehiculeNom}</p>
+                        </div>
+                    `;
                 }
-        }
+            }
 
             // Ajouter le kit seulement s'il est sélectionné et valide
-            if (selectedKit && selectedKit.id && selectedKit.prix) {
-            const prixHT = parseFloat(selectedKit.prix);
+            if (selectedKit && selectedKit.id && selectedKit.prix !== undefined && selectedKit.prix !== null) {
+                 const prixHT = parseFloat(selectedKit.prix);
                 if (!isNaN(prixHT)) {
-            total += prixHT;
-            const kitCard = document.querySelector(`.kit-card[data-id="${selectedKit.id}"]`);
+                    total += prixHT;
+                    const kitCard = document.querySelector(`.kit-card[data-id="${selectedKit.id}"]`);
                     const kitNom = kitCard ? kitCard.querySelector('.card-title')?.textContent : 'Kit sélectionné';
-            html += `
-                <div class="recap-section">
-                    <h4>Kit d'aménagement</h4>
-                    <p>${kitNom} - ${formatPrix(prixHT, isTTC)}</p>
-                </div>
-            `;
-        }
+                    html += `
+                        <div class="recap-section">
+                            <h4>Kit d'aménagement</h4>
+                            <p>${kitNom} - ${formatPrix(prixHT, isTTC)}</p>
+                        </div>
+                    `;
+                }
             }
 
             // Ajouter les options seulement si elles sont valides
-            const validOptions = Array.from(selectedOptions).filter(option => 
-                option && 
-                option.id && 
-                option.prix && 
+             const validOptions = Array.from(selectedOptions).filter(option =>
+                option &&
+                option.id &&
+                option.prix !== undefined && option.prix !== null &&
                 !isNaN(parseFloat(option.prix))
             );
 
+
             if (validOptions.length > 0) {
-            html += `
-                <div class="recap-section">
-                    <h4>Options sélectionnées</h4>
-                    <ul class="list-unstyled">
-            `;
-            
-                validOptions.forEach(option => {
-                const prixHT = parseFloat(option.prix);
-                total += prixHT;
                 html += `
-                        <li>${option.nom || 'Option'} - ${formatPrix(prixHT, isTTC)}</li>
+                    <div class="recap-section">
+                        <h4>Options sélectionnées</h4>
+                        <ul class="list-unstyled">
                 `;
-            });
-            
-            html += `
-                    </ul>
-                </div>
-            `;
-        }
+
+                validOptions.forEach(option => {
+                    const prixHT = parseFloat(option.prix);
+                    total += prixHT;
+                    html += `
+                            <li>${option.nom || 'Option'} - ${formatPrix(prixHT, isTTC)}</li>
+                    `;
+                });
+
+                html += `
+                        </ul>
+                    </div>
+                `;
+            }
 
             // Ajouter le total seulement s'il est valide
             if (!isNaN(total) && total >= 0) {
-        const totalTTC = isTTC ? calculerPrixTTC(total) : total;
-        html += `
-            <div class="recap-section border-top pt-3 mt-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">Total ${isTTC ? 'TTC' : 'HT'}</h4>
-                    <p class="h3 mb-0">${totalTTC.toFixed(2)} €</p>
-                </div>
-                ${isTTC ? `
-                <div class="d-flex justify-content-between align-items-center mt-2">
-                    <small class="text-muted">Total HT</small>
-                    <small class="text-muted">${total.toFixed(2)} €</small>
-                </div>
-                <div class="d-flex justify-content-between align-items-center">
-                    <small class="text-muted">TVA (20%)</small>
-                    <small class="text-muted">${(totalTTC - total).toFixed(2)} €</small>
-                </div>
-                ` : ''}
-            </div>
-        `;
+                const totalTTC = isTTC ? calculerPrixTTC(total) : total;
+                html += `
+                    <div class="recap-section border-top pt-3 mt-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4 class="mb-0">Total ${isTTC ? 'TTC' : 'HT'}</h4>
+                            <p class="h3 mb-0">${totalTTC.toFixed(2).replace('.', ',')} €</p>
+                        </div>
+                        ${isTTC ? `
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <small class="text-muted">Total HT</small>
+                            <small class="text-muted">${total.toFixed(2).replace('.', ',')} €</small>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">TVA (20%)</small>
+                            <small class="text-muted">${(totalTTC - total).toFixed(2).replace('.', ',')} €</small>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
             }
 
-        recapDetails.innerHTML = html;
+            recapDetails.innerHTML = html;
             const recapElement = document.getElementById('recap');
             if (recapElement) {
                 recapElement.style.display = selectedVehicule ? 'block' : 'none';
@@ -216,12 +272,13 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Erreur dans updateRecap:', error);
             recapDetails.innerHTML = `
                 <div class="alert alert-danger">
-                    Une erreur est survenue lors de la mise à jour du récapitulatif. 
+                    Une erreur est survenue lors de la mise à jour du récapitulatif.
                     Veuillez rafraîchir la page.
                 </div>
             `;
         }
     }
+    window.updateRecap = updateRecap;
 
     // Fonction pour mettre à jour le total
     function updateTotal() {
@@ -234,28 +291,28 @@ document.addEventListener('DOMContentLoaded', function() {
     vehiculeCards.forEach(card => {
         card.addEventListener('click', async () => {
             const vehiculeId = card.dataset.id;
-            
+
             // Si on change de véhicule, on réinitialise tout
             if (selectedVehicule !== vehiculeId) {
                 // Supprimer la configuration précédente du localStorage
                 localStorage.removeItem('configurateur-state');
-                
+
                 // Réinitialiser complètement l'état
                 selectedKit = null;
                 kitPrix = 0;
                 selectedOptions = new Set();
-                
+
                 // Mettre à jour le véhicule sélectionné
             selectedVehicule = vehiculeId;
-            
+
             // Mettre à jour l'interface
             vehiculeCards.forEach(c => c.classList.remove('border-primary'));
             card.classList.add('border-primary');
-            
+
                 // Réinitialiser l'interface des kits et options
                 resetKitsUI();
                 resetOptionsUI();
-                
+
                 // Forcer la réinitialisation du récapitulatif
                 const recapDetails = document.getElementById('recap-details');
                 if (recapDetails) {
@@ -266,21 +323,21 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     `;
                 }
-                
+
                 // Réinitialiser le total
                 total = 0;
                 updateTotal();
-                
+
                 try {
                     // Charger les nouveaux kits et options
                     await loadKits(vehiculeId);
                     await loadOptions(vehiculeId);
-            
+
             // Afficher les sections
             document.getElementById('step-kit').style.display = 'block';
             document.getElementById('step-options').style.display = 'block';
             document.getElementById('step-kit').scrollIntoView({ behavior: 'smooth' });
-            
+
                     // Sauvegarder la nouvelle configuration
                     saveConfiguration();
                 } catch (error) {
@@ -309,33 +366,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Modifier la fonction loadKits pour gérer la réinitialisation
     async function loadKits(vehiculeId) {
+        console.log('Chargement des kits pour le véhicule:', vehiculeId);
         try {
             const response = await fetch(`get-kits.php?vehicule_id=${vehiculeId}`);
             const data = await response.json();
-            
-                    const kitGallery = document.getElementById('kit-gallery');
-            if (!kitGallery) return;
+            console.log('Données reçues du serveur:', data);
 
-            // Vérifier si data existe et contient la propriété success
+            const kitGallery = document.getElementById('kit-gallery');
+            if (!kitGallery) {
+                console.error('Élément kit-gallery non trouvé');
+                return;
+            }
+
             if (data && data.success && data.kits) {
-                    kitGallery.innerHTML = '';
+                kitGallery.innerHTML = '';
                 if (data.kits.length > 0) {
-                        data.kits.forEach(kit => {
-                        if (kit && kit.id) { // Vérifier que le kit est valide
+                    console.log('Création des cartes pour', data.kits.length, 'kits');
+                    data.kits.forEach(kit => {
+                        if (kit && kit.id) {
                             const kitCard = createKitCard(kit);
                             kitGallery.appendChild(kitCard);
                         }
-                        });
-                    } else {
-                        kitGallery.innerHTML = '<div class="col-12"><div class="alert alert-info">Aucun kit disponible pour ce véhicule.</div></div>';
-                    }
+                    });
                 } else {
-                console.error('Erreur:', data?.message || 'Réponse invalide du serveur');
-                    kitGallery.innerHTML = '<div class="col-12"><div class="alert alert-danger">Erreur lors du chargement des kits.</div></div>';
+                    console.log('Aucun kit disponible');
+                    kitGallery.innerHTML = '<div class="col-12"><div class="alert alert-info">Aucun kit disponible pour ce véhicule.</div></div>';
                 }
+            } else {
+                console.error('Erreur dans les données:', data?.message || 'Réponse invalide du serveur');
+                kitGallery.innerHTML = '<div class="col-12"><div class="alert alert-danger">Erreur lors du chargement des kits.</div></div>';
+            }
         } catch (error) {
-                console.error('Erreur:', error);
-                const kitGallery = document.getElementById('kit-gallery');
+            console.error('Erreur lors du chargement des kits:', error);
+            const kitGallery = document.getElementById('kit-gallery');
             if (kitGallery) {
                 kitGallery.innerHTML = '<div class="col-12"><div class="alert alert-danger">Erreur lors du chargement des kits.</div></div>';
             }
@@ -350,24 +413,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const response = await fetch(url.toString());
             const data = await response.json();
-            
+
             if (!optionsContainer) return;
 
             // Vérifier si data existe et contient la propriété success
             if (data && data.success && data.options) {
                 optionsContainer.innerHTML = '';
-                
+
                 if (data.options.length > 0) {
                     const row = document.createElement('div');
                     row.className = 'row g-4';
-                    
+
                     data.options.forEach(option => {
                         if (option && option.id) {
                             const optionCard = createOptionCard(option);
                             row.appendChild(optionCard);
                         }
                     });
-                    
+
                     optionsContainer.appendChild(row);
                 } else {
                     optionsContainer.innerHTML = '<div class="col-12"><div class="alert alert-info">Aucune option disponible pour ce véhicule.</div></div>';
@@ -386,11 +449,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Créer une carte de kit
     function createKitCard(kit) {
+        console.log('Création d\'une carte pour le kit:', kit);
         const card = document.createElement('div');
         card.className = 'col-md-6 col-lg-4 mb-4';
         card.innerHTML = `
-            <div class="card h-100">
-                ${kit.images && kit.images.length > 0 
+            <div class="card h-100 kit-card" data-id="${kit.id}">
+                ${kit.images && kit.images.length > 0
                     ? `<div id="kitCarousel${kit.id}" class="carousel slide" data-bs-ride="carousel">
                         <div class="carousel-inner">
                             ${kit.images.map((image, index) => `
@@ -415,11 +479,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p class="card-text">${kit.description}</p>
                     <div class="d-flex justify-content-between align-items-center">
                         <span class="h5 mb-0">${kit.prix.toFixed(2)} € TTC</span>
-                        <button class="btn btn-primary" onclick="selectKit(${kit.id})">Sélectionner</button>
+                        <button class="btn btn-primary select-kit" onclick="selectKit(Number(${kit.id}), ${kit.prix})">Sélectionner</button>
                     </div>
                 </div>
             </div>
         `;
+
         return card;
     }
 
@@ -427,12 +492,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function createOptionCard(option) {
         const col = document.createElement('div');
         col.className = 'col-md-6 col-lg-4';
-        
+
         col.innerHTML = `
             <div class="card h-100 option-card" data-id="${option.id}">
                 <div id="optionCarousel${option.id}" class="carousel slide" data-bs-ride="carousel">
                     <div class="carousel-inner">
-                        ${option.images && option.images.length > 0 ? 
+                        ${option.images && option.images.length > 0 ?
                             option.images.map((image, index) => `
                                 <div class="carousel-item ${index === 0 ? 'active' : ''}">
                                     <img src="${image}" class="card-img-top" alt="${option.nom}">
@@ -461,9 +526,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div class="card-footer bg-transparent">
                     <div class="form-check">
-                        <input class="form-check-input option-checkbox" type="checkbox" 
-                               id="option${option.id}" 
-                               data-id="${option.id}" 
+                        <input class="form-check-input option-checkbox" type="checkbox"
+                               id="option${option.id}"
+                               data-id="${option.id}"
                                data-prix="${option.prix}"
                                data-nom="${option.nom || 'Option sans nom'}">
                         <label class="form-check-label" for="option${option.id}">
@@ -481,6 +546,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const optionPrix = parseFloat(this.dataset.prix);
             const optionCard = this.closest('.option-card');
             const optionNom = optionCard.querySelector('.card-title').textContent;
+
 
             if (this.checked) {
                 selectedOptions.add({
@@ -534,6 +600,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (nomInput) nomInput.focus();
     });
 
+
     btnEnvoyerDevis.addEventListener('click', async () => {
         if (!formDevis.checkValidity()) {
             formDevis.reportValidity();
@@ -584,4 +651,41 @@ document.addEventListener('DOMContentLoaded', function() {
             btnEnvoyerDevis.textContent = 'Envoyer';
         }
     });
+
+    // Gestion du bouton de réinitialisation
+    const btnResetConfig = document.getElementById('btnResetConfig');
+    if (btnResetConfig) {
+        btnResetConfig.addEventListener('click', () => {
+            // Réinitialiser les variables d'état
+            selectedVehicule = null;
+            selectedKit = null;
+            kitPrix = 0;
+            selectedOptions = new Set();
+            total = 0;
+
+            // Réinitialiser l'interface
+            vehiculeCards.forEach(card => card.classList.remove('border-primary'));
+            const kitGallery = document.getElementById('kit-gallery');
+            if (kitGallery) kitGallery.innerHTML = ''; // Vider la galerie de kits
+            const optionsContainer = document.querySelector('.option-container');
+            if (optionsContainer) optionsContainer.innerHTML = ''; // Vider le conteneur d'options
+
+            // Cacher les sections Kit et Options
+            document.getElementById('step-kit').style.display = 'none';
+            document.getElementById('step-options').style.display = 'none';
+            document.getElementById('recap').style.display = 'none'; // Cacher le récapitulatif
+
+            // Réinitialiser et cacher le récapitulatif
+            const recapDetails = document.getElementById('recap-details');
+            if (recapDetails) recapDetails.innerHTML = '';
+
+            // Supprimer l'état sauvegardé dans le localStorage
+            localStorage.removeItem('configurateur-state');
+
+            // Remonter en haut de la page ou vers la section véhicule
+            document.getElementById('step-vehicule').scrollIntoView({ behavior: 'smooth' });
+
+            console.log('Configuration réinitialisée.');
+        });
+    }
 });

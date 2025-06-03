@@ -1,6 +1,66 @@
 <?php
 require 'header.php';
 
+// Récupérer les kits avec leurs images et véhicules associés
+try {
+    $sql = "
+        SELECT k.id, k.nom, k.description, k.prix, k.created_at,
+               GROUP_CONCAT(DISTINCT CONCAT(v.id, ':', CAST(kvc.prix AS CHAR))) as vehicules_prix,
+               GROUP_CONCAT(DISTINCT ki.image_path) as images
+        FROM kits k
+        LEFT JOIN kit_vehicule_compatibilite kvc ON k.id = kvc.id_kit
+        LEFT JOIN vehicules v ON kvc.id_vehicule = v.id
+        LEFT JOIN kit_images ki ON k.id = ki.id_kit
+        GROUP BY k.id, k.nom, k.description, k.prix, k.created_at
+        ORDER BY k.nom
+    ";
+    error_log("Requête SQL : " . $sql);
+    
+    // Exécuter la requête en plusieurs étapes pour mieux identifier les problèmes
+    $stmt = $pdo->prepare($sql);
+    if (!$stmt) {
+        error_log("Erreur de préparation de la requête : " . print_r($pdo->errorInfo(), true));
+        die("Erreur de préparation de la requête");
+    }
+    
+    if (!$stmt->execute()) {
+        error_log("Erreur d'exécution de la requête : " . print_r($stmt->errorInfo(), true));
+        die("Erreur d'exécution de la requête");
+    }
+    
+    $kits = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    error_log("Nombre de kits récupérés : " . count($kits));
+    error_log("Contenu des kits : " . print_r($kits, true));
+} catch (PDOException $e) {
+    error_log("Erreur SQL : " . $e->getMessage());
+    error_log("Code erreur : " . $e->getCode());
+    error_log("Détails de l'erreur : " . print_r($pdo->errorInfo(), true));
+    die("Erreur lors de la requête SQL : " . $e->getMessage());
+} catch (Exception $e) {
+    error_log("Erreur générale : " . $e->getMessage());
+    die("Erreur : " . $e->getMessage());
+}
+
+// Transformer les chaînes en tableaux
+foreach ($kits as &$kit) {
+    if ($kit['vehicules_prix']) {
+        $vehicules_prix = explode(',', $kit['vehicules_prix']);
+        $kit['vehicules_prix'] = [];
+        foreach ($vehicules_prix as $vp) {
+            list($id, $prix) = explode(':', $vp);
+            $kit['vehicules_prix'][$id] = $prix;
+        }
+    } else {
+        $kit['vehicules_prix'] = [];
+    }
+    if ($kit['images']) {
+        $kit['images'] = explode(',', $kit['images']);
+    } else {
+        $kit['images'] = [];
+    }
+}
+
+// Gestion des actions
 $action = $_GET['action'] ?? 'list';
 $id = $_GET['id'] ?? null;
 $message = '';
@@ -154,17 +214,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Récupérer les kits avec leurs images et véhicules associés
-$kits = $pdo->query("
-    SELECT k.*, 
-           GROUP_CONCAT(DISTINCT CONCAT(v.nom, ':', kvc.prix)) as vehicules_prix,
-           GROUP_CONCAT(ki.image_path) as images
-    FROM kits k
-    LEFT JOIN kit_vehicule_compatibilite kvc ON k.id = kvc.id_kit
-    LEFT JOIN vehicules v ON kvc.id_vehicule = v.id
-    LEFT JOIN kit_images ki ON k.id = ki.id_kit
-    GROUP BY k.id
-    ORDER BY k.nom
-")->fetchAll(PDO::FETCH_ASSOC);
+try {
+    // Vérifier d'abord la structure des tables
+    $stmt = $pdo->query("SHOW COLUMNS FROM kits");
+    $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    error_log("Colonnes de la table kits : " . print_r($columns, true));
+
+    $stmt = $pdo->query("SHOW COLUMNS FROM kit_vehicule_compatibilite");
+    $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    error_log("Colonnes de kit_vehicule_compatibilite : " . print_r($columns, true));
+
+    $stmt = $pdo->query("SHOW COLUMNS FROM vehicules");
+    $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    error_log("Colonnes de vehicules : " . print_r($columns, true));
+
+    $stmt = $pdo->query("SHOW COLUMNS FROM kit_images");
+    $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    error_log("Colonnes de kit_images : " . print_r($columns, true));
+
+    // Vérifier les relations
+    $stmt = $pdo->query("SELECT COUNT(*) FROM kits");
+    $count = $stmt->fetchColumn();
+    error_log("Nombre total de kits : " . $count);
+
+    $stmt = $pdo->query("SELECT COUNT(*) FROM kit_vehicule_compatibilite");
+    $count = $stmt->fetchColumn();
+    error_log("Nombre d'entrées dans kit_vehicule_compatibilite : " . $count);
+
+    $stmt = $pdo->query("SELECT COUNT(*) FROM vehicules");
+    $sql = "
+        SELECT k.id, k.nom, k.description, k.prix, k.created_at,
+               GROUP_CONCAT(DISTINCT CONCAT(v.id, ':', CAST(kvc.prix AS CHAR))) as vehicules_prix,
+               GROUP_CONCAT(DISTINCT ki.image_path) as images
+        FROM kits k
+        LEFT JOIN kit_vehicule_compatibilite kvc ON k.id = kvc.id_kit
+        LEFT JOIN vehicules v ON kvc.id_vehicule = v.id
+        LEFT JOIN kit_images ki ON k.id = ki.id_kit
+        GROUP BY k.id, k.nom, k.description, k.prix, k.created_at
+        ORDER BY k.nom
+    ";
+    error_log("Requête SQL : " . $sql);
+    
+    // Exécuter la requête en plusieurs étapes pour mieux identifier les problèmes
+    $stmt = $pdo->prepare($sql);
+    if (!$stmt) {
+        error_log("Erreur de préparation de la requête : " . print_r($pdo->errorInfo(), true));
+        die("Erreur de préparation de la requête");
+    }
+    
+    if (!$stmt->execute()) {
+        error_log("Erreur d'exécution de la requête : " . print_r($stmt->errorInfo(), true));
+        die("Erreur d'exécution de la requête");
+    }
+    
+    $kits = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    error_log("Nombre de kits récupérés : " . count($kits));
+    error_log("Contenu des kits : " . print_r($kits, true));
+} catch (PDOException $e) {
+    error_log("Erreur SQL : " . $e->getMessage());
+    error_log("Code erreur : " . $e->getCode());
+    error_log("Détails de l'erreur : " . print_r($pdo->errorInfo(), true));
+    die("Erreur lors de la requête SQL : " . $e->getMessage());
+} catch (Exception $e) {
+    error_log("Erreur générale : " . $e->getMessage());
+    die("Erreur : " . $e->getMessage());
+}
 
 // Transformer les chaînes en tableaux
 foreach ($kits as &$kit) {
@@ -172,8 +286,8 @@ foreach ($kits as &$kit) {
     $kit['vehicules_prix'] = $kit['vehicules_prix'] ? array_reduce(
         explode(',', $kit['vehicules_prix']),
         function($carry, $item) {
-            list($nom, $prix) = explode(':', $item);
-            $carry[$nom] = $prix;
+            list($id, $prix) = explode(':', $item);
+            $carry[$id] = $prix;
             return $carry;
         },
         []
@@ -215,41 +329,29 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
             <h3 class="card-title">Ajouter un kit</h3>
         </div>
         <div class="card-body">
-            <form method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="action" value="add">
-                
+            <form action="save-kit.php" method="POST" enctype="multipart/form-data">
                 <div class="mb-3">
                     <label for="nom" class="form-label">Nom</label>
                     <input type="text" class="form-control" id="nom" name="nom" required>
                 </div>
-                
+
                 <div class="mb-3">
                     <label for="description" class="form-label">Description</label>
-                    <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
                 </div>
-                
+
                 <div class="mb-3">
                     <label class="form-label">Véhicules compatibles</label>
-                    <div class="row">
+                    <div class="vehicules-compatibles">
                         <?php foreach ($vehicules as $vehicule): ?>
-                            <div class="col-md-6 mb-2">
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input vehicule-check" 
-                                           id="vehicule_<?= $vehicule['id'] ?>" 
-                                           name="vehicules[]" 
-                                           value="<?= $vehicule['id'] ?>"
-                                           onchange="togglePrixInput(this)">
-                                    <label class="form-check-label" for="vehicule_<?= $vehicule['id'] ?>">
-                                        <?= htmlspecialchars($vehicule['nom']) ?>
-                                    </label>
-                                </div>
-                                <div class="input-group mt-1 prix-input" style="display: none;">
-                                    <input type="number" class="form-control" 
-                                           name="prix_<?= $vehicule['id'] ?>" 
-                                           placeholder="Prix" 
-                                           step="0.01" 
-                                           disabled>
-                                    <span class="input-group-text">€</span>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="vehicule<?= $vehicule['id'] ?>" name="vehicules[]" value="<?= $vehicule['id'] ?>">
+                                <label class="form-check-label" for="vehicule<?= $vehicule['id'] ?>">
+                                    <?= htmlspecialchars($vehicule['nom']) ?>
+                                </label>
+                                <div class="price-input mt-2" style="display: none;">
+                                    <label for="prix_<?= $vehicule['id'] ?>" class="form-label">Prix pour ce véhicule (€)</label>
+                                    <input type="number" class="form-control" id="prix_<?= $vehicule['id'] ?>" name="prix_<?= $vehicule['id'] ?>" step="0.01" min="0">
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -271,17 +373,27 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
 <?php elseif (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])): ?>
     <?php
     $stmt = $pdo->prepare("
-        SELECT k.*, GROUP_CONCAT(kvc.id_vehicule) as vehicules_ids
+        SELECT k.*, 
+               GROUP_CONCAT(DISTINCT CONCAT(v.id, ':', kvc.prix)) as vehicules_prix,
+               GROUP_CONCAT(kvc.id_vehicule) as vehicules_ids
         FROM kits k
         LEFT JOIN kit_vehicule_compatibilite kvc ON k.id = kvc.id_kit
+        LEFT JOIN vehicules v ON kvc.id_vehicule = v.id
         WHERE k.id = ?
         GROUP BY k.id
     ");
     $stmt->execute([$_GET['id']]);
     $kit = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if ($kit):
-        $kit['vehicules_ids'] = $kit['vehicules_ids'] ? explode(',', $kit['vehicules_ids']) : [];
+    $vehicules_ids = $kit['vehicules_ids'] ? explode(',', $kit['vehicules_ids']) : [];
+    $vehicules_prix = $kit['vehicules_prix'] ? array_reduce(
+        explode(',', $kit['vehicules_prix']),
+        function($carry, $item) {
+            list($id, $prix) = explode(':', $item);
+            $carry[$id] = $prix;
+            return $carry;
+        },
+        []
+    ) : [];
     ?>
     <div class="card">
         <div class="card-header">
@@ -295,40 +407,29 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
                     <label for="nom" class="form-label">Nom</label>
                     <input type="text" class="form-control" id="nom" name="nom" value="<?= htmlspecialchars($kit['nom']) ?>" required>
                 </div>
-                
+
                 <div class="mb-3">
                     <label for="description" class="form-label">Description</label>
-                    <textarea class="form-control" id="description" name="description" rows="3"><?= htmlspecialchars($kit['description']) ?></textarea>
+                    <textarea class="form-control" id="description" name="description" rows="3" required><?= htmlspecialchars($kit['description']) ?></textarea>
                 </div>
-                
+
                 <div class="mb-3">
                     <label class="form-label">Véhicules compatibles</label>
-                    <div class="row">
-                        <?php foreach ($vehicules as $vehicule): 
-                            $stmt = $pdo->prepare("SELECT prix FROM kit_vehicule_compatibilite WHERE id_kit = ? AND id_vehicule = ?");
-                            $stmt->execute([$kit['id'], $vehicule['id']]);
-                            $prix = $stmt->fetchColumn();
-                        ?>
-                            <div class="col-md-6 mb-2">
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input vehicule-check" 
-                                           id="vehicule_<?= $vehicule['id'] ?>" 
-                                           name="vehicules[]" 
-                                           value="<?= $vehicule['id'] ?>"
-                                           <?= in_array($vehicule['id'], $kit['vehicules_ids']) ? 'checked' : '' ?>
-                                           onchange="togglePrixInput(this)">
-                                    <label class="form-check-label" for="vehicule_<?= $vehicule['id'] ?>">
-                                        <?= htmlspecialchars($vehicule['nom']) ?>
-                                    </label>
+                    <div class="vehicules-compatibles">
+                        <?php foreach ($vehicules as $vehicule): ?>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="vehicule<?= $vehicule['id'] ?>" name="vehicules[]" value="<?= $vehicule['id'] ?>" 
+                                       <?php if (in_array($vehicule['id'], $vehicules_ids)): ?>checked<?php endif; ?>>
+                                <label class="form-check-label" for="vehicule<?= $vehicule['id'] ?>">
+                                    <?= htmlspecialchars($vehicule['nom']) ?>
+                                </label>
+                                <div class="price-input mt-2" style="display: <?php echo in_array($vehicule['id'], $vehicules_ids) ? 'block' : 'none'; ?>;">
+                                    <label for="prix_<?= $vehicule['id'] ?>" class="form-label">Prix pour ce véhicule (€)</label>
+                                    <input type="number" class="form-control" id="prix_<?= $vehicule['id'] ?>" name="prix_<?= $vehicule['id'] ?>" 
+                                           value="<?= isset($vehicules_prix[$vehicule['id']]) ? htmlspecialchars($vehicules_prix[$vehicule['id']]) : '' ?>" 
+                                           step="0.01" min="0">
                                 </div>
-                                <div class="input-group mt-1 prix-input" style="display: <?= in_array($vehicule['id'], $kit['vehicules_ids']) ? 'flex' : 'none' ?>;">
-                                    <input type="number" class="form-control" 
-                                           name="prix_<?= $vehicule['id'] ?>" 
-                                           placeholder="Prix" 
-                                           step="0.01" 
-                                           value="<?= $prix ?>"
-                                           <?= in_array($vehicule['id'], $kit['vehicules_ids']) ? '' : 'disabled' ?>>
-                                    <span class="input-group-text">€</span>
+                                    <span class="input-group-text">€ TTC</span>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -372,7 +473,6 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
             </form>
         </div>
     </div>
-    <?php endif; ?>
 <?php else: ?>
     <div class="table-responsive">
         <table class="table table-striped align-middle">
@@ -472,7 +572,7 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
             </tbody>
         </table>
     </div>
-
+<?php endif; ?>
 <style>
 .description-cell {
     line-height: 1.4;
@@ -509,36 +609,35 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
     transform: scale(1.1);
 }
 </style>
-<?php endif; ?>
 
 <script>
-function togglePrixInput(checkbox) {
-    const prixInput = checkbox.parentElement.nextElementSibling.querySelector('input');
-    prixInput.disabled = !checkbox.checked;
-}
-
-function deleteKit(kitId) {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce kit ?')) {
-        fetch('delete-kit.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ id: kitId })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Erreur lors de la suppression : ' + data.message);
-            }
-        })
-        .catch(error => {
-            alert('Erreur lors de la suppression : ' + error);
-        });
+document.addEventListener('DOMContentLoaded', function() {
+    // Fonction pour gérer l'affichage des champs de prix
+    function togglePrixInput(checkbox) {
+        const vehiculeId = checkbox.value;
+        const prixGroup = document.getElementById('prix_group_' + vehiculeId);
+        const prixInput = document.getElementById('prix_' + vehiculeId);
+        
+        if (prixGroup && prixInput) {
+            prixInput.disabled = !checkbox.checked;
+            prixGroup.style.display = checkbox.checked ? 'flex' : 'none';
+        }
     }
-}
+
+    // Ajouter les écouteurs d'événements aux checkboxes
+    const checkboxes = document.querySelectorAll('.vehicule-check');
+    checkboxes.forEach(checkbox => {
+        // Initialiser l'état des champs de prix pour les checkboxes cochées
+        if (checkbox.checked) {
+            togglePrixInput(checkbox);
+        }
+        
+        // Ajouter l'écouteur d'événement pour les changements futurs
+        checkbox.addEventListener('change', function() {
+            togglePrixInput(this);
+        });
+    });
+});
 
 function updateKit(event, kitId) {
     event.preventDefault();
@@ -552,13 +651,6 @@ function updateKit(event, kitId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Fermer le modal
-            const modalElement = document.getElementById(`editKitModal${kitId}`);
-            const modal = bootstrap.Modal.getInstance(modalElement);
-            if (modal) {
-                modal.hide();
-            }
-            // Rediriger vers kits.php
             window.location.href = 'kits.php?success=edit';
         } else {
             alert('Erreur lors de la modification : ' + data.message);
@@ -629,35 +721,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Gestion de la suppression des images
 document.addEventListener('DOMContentLoaded', function() {
+    // Gérer l'affichage des champs de prix
+    document.querySelectorAll('.form-check-input').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const priceInput = this.closest('.form-check').querySelector('.price-input');
+            if (this.checked) {
+                priceInput.style.display = 'block';
+            } else {
+                priceInput.style.display = 'none';
+            }
+        });
+    });
+
+    // Gérer la suppression des images
     document.querySelectorAll('.delete-image').forEach(button => {
         button.addEventListener('click', function() {
             const imageId = this.dataset.id;
             const type = this.dataset.type;
+            const image = this.dataset.image;
             
             if (confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) {
-                fetch('delete-image.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ id: imageId, type: type })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Supprimer l'élément de l'interface
-                        this.closest('.col-auto').remove();
-                    } else {
-                        alert('Erreur lors de la suppression : ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    alert('Erreur lors de la suppression : ' + error);
-                });
+                fetch(`delete_image.php?type=${type}&id=${imageId}&image=${image}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            this.closest('.image-preview-item').remove();
+                        } else {
+                            alert('Erreur lors de la suppression de l\'image');
+                        }
+                    });
             }
         });
     });
 });
 </script>
 
-<?php require 'footer.php'; ?> 
+<?php require 'footer.php'; ?>
