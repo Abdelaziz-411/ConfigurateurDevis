@@ -209,14 +209,12 @@ require '../config.php';
             <a href="kits.php" <?php echo basename($_SERVER['PHP_SELF']) == 'kits.php' ? 'class="active"' : ''; ?>>
                 <i class="bi bi-box"></i> Kits
             </a>
-            <a href="options.php" <?php echo basename($_SERVER['PHP_SELF']) == 'options.php' ? 'class="active"' : ''; ?> >
+            <a href="options.php" <?php echo basename($_SERVER['PHP_SELF']) == 'options.php' ? 'class="active"' : ''; ?>>
                 <i class="bi bi-gear"></i> Options
             </a>
-<?php /*
-            <a href="gestion_images.php" <?php echo basename($_SERVER['PHP_SELF']) == 'gestion_images.php' ? 'class="active"' : ''; ?> >
-                <i class="bi bi-images"></i> Gestion des Images
+            <a href="categories-options.php" <?php echo basename($_SERVER['PHP_SELF']) == 'categories-options.php' ? 'class="active"' : ''; ?> >
+                <i class="bi bi-tags"></i> Catégories d'options
             </a>
-*/ ?>
             <a href="devis.php" <?php echo basename($_SERVER['PHP_SELF']) == 'devis.php' ? 'class="active"' : ''; ?> >
                 <i class="bi bi-file-earmark-text"></i> Devis
             </a>

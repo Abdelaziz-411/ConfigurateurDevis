@@ -173,4 +173,60 @@ body {
     outline: none;
     border-color: rgb(88, 0, 189);
     box-shadow: 0 0 0 2px rgba(88, 0, 189, 0.1);
+}
+
+/* Styles pour les statistiques (index.php) */
+.stats {
+    display: flex;
+    justify-content: space-around;
+    gap: 20px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+    flex-basis: 200px; /* Taille de base pour chaque carte */
+    flex-grow: 1;
+    transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+.stat-card h3 {
+    color: rgb(88, 0, 189);
+    margin-bottom: 10px;
+    font-size: 1.2rem;
+}
+
+.stat-card p {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #2c3e50;
+    margin: 0;
+}
+
+/* Styles pour les actions rapides (index.php) */
+.actions {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.actions h2 {
+    color: #2c3e50;
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.5rem;
+}
+
+.actions .btn {
+    margin-right: 10px;
 } 

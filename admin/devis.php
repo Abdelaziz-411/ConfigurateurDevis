@@ -29,6 +29,9 @@ $devis = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 case 'edit':
                     echo 'Le devis a été modifié avec succès.';
                     break;
+                case 'email':
+                    echo 'L\'email a été envoyé avec succès.';
+                    break;
             }
             ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
@@ -37,10 +40,53 @@ $devis = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     <?php if (isset($_GET['error'])): ?>
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <?= htmlspecialchars($_GET['error']) ?>
+            <?php
+            switch ($_GET['error']) {
+                case 'email':
+                    echo 'Une erreur est survenue lors de l\'envoi de l\'email.';
+                    break;
+                default:
+                    echo htmlspecialchars($_GET['error']);
+            }
+            ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
         </div>
     <?php endif; ?>
+
+    <!-- Filtres et recherche -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="filterForm" class="row g-3">
+                <div class="col-md-4">
+                    <label for="search" class="form-label">Recherche</label>
+                    <input type="text" class="form-control" id="search" placeholder="Nom, email, téléphone...">
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Statut</label>
+                    <select class="form-select" id="status">
+                        <option value="">Tous les statuts</option>
+                        <option value="nouveau">Nouveau</option>
+                        <option value="en_cours">En cours</option>
+                        <option value="traite">Traité</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="dateRange" class="form-label">Période</label>
+                    <select class="form-select" id="dateRange">
+                        <option value="all">Toutes les dates</option>
+                        <option value="today">Aujourd'hui</option>
+                        <option value="week">Cette semaine</option>
+                        <option value="month">Ce mois</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-primary w-100" onclick="exportDevis()">
+                        <i class="bi bi-download"></i> Exporter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <div class="table-responsive mt-4">
         <table class="table table-striped">
@@ -81,18 +127,23 @@ $devis = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             </form>
                         </td>
                         <td>
-                            <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#devisModal<?= $d['id'] ?>">
-                                <i class="bi bi-eye"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editDevisModal<?= $d['id'] ?>">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-danger" onclick="deleteDevis(<?= $d['id'] ?>)">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                            <a href="../generate-pdf.php?devis_id=<?= $d['id'] ?>" class="btn btn-sm btn-primary" target="_blank">
-                                <i class="bi bi-file-pdf"></i>
-                            </a>
+                            <div class="d-flex gap-2">
+                                <form action="send_email.php" method="POST" class="d-inline">
+                                    <input type="hidden" name="devis_id" value="<?= $d['id'] ?>">
+                                    <button type="submit" class="btn btn-info btn-sm" title="Envoyer par email">
+                                        <i class="bi bi-envelope"></i>
+                                    </button>
+                                </form>
+                                <a href="edit_devis.php?id=<?= $d['id'] ?>" class="btn btn-primary btn-sm" title="Modifier">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-danger btn-sm" onclick="deleteDevis(<?= $d['id'] ?>)" title="Supprimer">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                <a href="../generate-pdf.php?devis_id=<?= $d['id'] ?>" class="btn btn-secondary btn-sm" target="_blank" title="Télécharger PDF">
+                                    <i class="bi bi-file-pdf"></i>
+                                </a>
+                            </div>
                         </td>
                     </tr>
 
@@ -347,6 +398,146 @@ function updateDevis(event, devisId) {
 
     return false;
 }
+
+// Fonction pour filtrer les devis
+function filterDevis() {
+    const searchTerm = document.getElementById('search').value.toLowerCase();
+    const statusFilter = document.getElementById('status').value;
+    const dateRange = document.getElementById('dateRange').value;
+    
+    const rows = document.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        const status = row.querySelector('select[name="statut"]').value;
+        const date = new Date(row.querySelector('td:nth-child(2)').textContent);
+        
+        let showRow = true;
+        
+        // Filtre de recherche
+        if (searchTerm && !text.includes(searchTerm)) {
+            showRow = false;
+        }
+        
+        // Filtre de statut
+        if (statusFilter && status !== statusFilter) {
+            showRow = false;
+        }
+        
+        // Filtre de date
+        if (dateRange !== 'all') {
+            const today = new Date();
+            const diffTime = Math.abs(today - date);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            switch(dateRange) {
+                case 'today':
+                    if (diffDays > 1) showRow = false;
+                    break;
+                case 'week':
+                    if (diffDays > 7) showRow = false;
+                    break;
+                case 'month':
+                    if (diffDays > 30) showRow = false;
+                    break;
+            }
+        }
+        
+        row.style.display = showRow ? '' : 'none';
+    });
+}
+
+// Ajouter les écouteurs d'événements pour les filtres
+document.getElementById('search').addEventListener('input', filterDevis);
+document.getElementById('status').addEventListener('change', filterDevis);
+document.getElementById('dateRange').addEventListener('change', filterDevis);
+
+// Fonction pour exporter les devis
+function exportDevis() {
+    const rows = Array.from(document.querySelectorAll('tbody tr')).filter(row => row.style.display !== 'none');
+    const csvContent = [
+        ['ID', 'Date', 'Client', 'Contact', 'Véhicule', 'Kit', 'Prix TTC', 'Statut'].join(','),
+        ...rows.map(row => {
+            const cells = row.querySelectorAll('td');
+            return [
+                cells[0].textContent,
+                cells[1].textContent,
+                cells[2].textContent,
+                cells[3].textContent,
+                cells[4].textContent,
+                cells[5].textContent,
+                cells[6].textContent,
+                cells[7].querySelector('select').value
+            ].join(',');
+        })
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'devis_' + new Date().toISOString().split('T')[0] + '.csv';
+    link.click();
+}
 </script>
+
+<style>
+.card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: rgb(88, 0, 189);
+    box-shadow: 0 0 0 0.2rem rgba(88, 0, 189, 0.25);
+}
+
+.btn-primary {
+    background-color: rgb(88, 0, 189);
+    border-color: rgb(88, 0, 189);
+}
+
+.btn-primary:hover {
+    background-color: rgb(98, 10, 199);
+    border-color: rgb(98, 10, 199);
+}
+
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.status-form select {
+    min-width: 120px;
+}
+
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .col-md-2 {
+        margin-top: 1rem;
+    }
+}
+
+.btn-info {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+    color: white;
+}
+
+.btn-info:hover {
+    background-color: #138496;
+    border-color: #117a8b;
+    color: white;
+}
+
+.gap-2 {
+    gap: 0.5rem !important;
+}
+</style>
 
 <?php require 'footer.php'; ?> 

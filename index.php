@@ -104,7 +104,7 @@ $vehicules = $pdo->query("SELECT * FROM vehicules ORDER BY nom")->fetchAll(PDO::
         </section>
 
         <!-- Étape 2 : Sélection du kit -->
-        <section id="step-kit" class="mb-5" style="display: none;">
+        <section id="step-kit" class="mb-5 fade-in-section">
             <h2 class="mb-4"><i class="bi bi-2-circle"></i> Choisissez votre kit d'aménagement</h2>
             <div id="kit-gallery" class="row g-4">
                 <!-- Les kits seront chargés dynamiquement ici -->
@@ -112,7 +112,7 @@ $vehicules = $pdo->query("SELECT * FROM vehicules ORDER BY nom")->fetchAll(PDO::
         </section>
 
         <!-- Étape 3 : Options supplémentaires -->
-        <section id="step-options" class="mb-5" style="display: none;">
+        <section id="step-options" class="mb-5 fade-in-section">
             <h2 class="mb-4"><i class="bi bi-3-circle"></i> Personnalisez avec des options</h2>
             <div class="option-container row g-4">
                 <!-- Les options seront chargées dynamiquement ici -->
@@ -120,7 +120,7 @@ $vehicules = $pdo->query("SELECT * FROM vehicules ORDER BY nom")->fetchAll(PDO::
         </section>
 
         <!-- Section récapitulatif -->
-        <div id="recap" class="mt-4" style="display: none;">
+        <div id="recap" class="mt-4 fade-in-section">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3 class="mb-0">Récapitulatif</h3>

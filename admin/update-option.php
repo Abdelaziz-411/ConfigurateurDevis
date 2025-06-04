@@ -32,12 +32,13 @@ try {
     $id = $_POST['id'];
     $nom = $_POST['nom'];
     $description = $_POST['description'] ?? '';
+    $id_categorie = !empty($_POST['id_categorie']) ? $_POST['id_categorie'] : null;
 
-    error_log("Mise à jour de l'option ID: $id, Nom: $nom, Description: $description");
+    error_log("Mise à jour de l'option ID: $id, Nom: $nom, Description: $description, Catégorie: $id_categorie");
 
     // Mise à jour de l'option
-    $stmt = $pdo->prepare("UPDATE options SET nom = ?, description = ? WHERE id = ?");
-    $stmt->execute([$nom, $description, $id]);
+    $stmt = $pdo->prepare("UPDATE options SET nom = ?, description = ?, id_categorie = ? WHERE id = ?");
+    $stmt->execute([$nom, $description, $id_categorie, $id]);
     error_log("Option mise à jour dans la base de données");
 
     // Mise à jour des compatibilités avec les véhicules

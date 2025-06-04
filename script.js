@@ -96,8 +96,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         selectedOptions = new Set();
 
                         // Afficher les sections
-                        document.getElementById('step-kit').style.display = 'block';
-                        document.getElementById('step-options').style.display = 'block';
+                        document.getElementById('step-kit').classList.add('is-visible');
+                        document.getElementById('step-options').classList.add('is-visible');
 
                         // Charger les kits et options pour ce véhicule
                         await loadKits(config.vehicule);
@@ -266,7 +266,11 @@ document.addEventListener('DOMContentLoaded', function() {
             recapDetails.innerHTML = html;
             const recapElement = document.getElementById('recap');
             if (recapElement) {
-                recapElement.style.display = selectedVehicule ? 'block' : 'none';
+                if (selectedVehicule) {
+                    recapElement.classList.add('is-visible');
+                } else {
+                    recapElement.classList.remove('is-visible');
+                }
             }
         } catch (error) {
             console.error('Erreur dans updateRecap:', error);
@@ -334,8 +338,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     await loadOptions(vehiculeId);
 
             // Afficher les sections
-            document.getElementById('step-kit').style.display = 'block';
-            document.getElementById('step-options').style.display = 'block';
+            document.getElementById('step-kit').classList.add('is-visible');
+            document.getElementById('step-options').classList.add('is-visible');
             document.getElementById('step-kit').scrollIntoView({ behavior: 'smooth' });
 
                     // Sauvegarder la nouvelle configuration
@@ -416,22 +420,124 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (!optionsContainer) return;
 
-            // Vérifier si data existe et contient la propriété success
             if (data && data.success && data.options) {
                 optionsContainer.innerHTML = '';
 
                 if (data.options.length > 0) {
-                    const row = document.createElement('div');
-                    row.className = 'row g-4';
-
-                    data.options.forEach(option => {
-                        if (option && option.id) {
-                            const optionCard = createOptionCard(option);
-                            row.appendChild(optionCard);
+                    // Grouper les options par catégorie
+                    const optionsByCategory = data.options.reduce((acc, option) => {
+                        const categoryId = option.categorie_id || 'sans-categorie';
+                        const categoryName = option.categorie_nom || 'Sans catégorie';
+                        if (!acc[categoryId]) {
+                            acc[categoryId] = {
+                                name: categoryName,
+                                options: []
+                            };
                         }
+                        acc[categoryId].options.push(option);
+                        return acc;
+                    }, {});
+
+                    // Ajouter les filtres
+                    const filterSection = document.createElement('div');
+                    filterSection.className = 'mb-4';
+                    filterSection.innerHTML = `
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control" id="optionSearch" placeholder="Rechercher une option...">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <select class="form-select" id="sortOptions" style="max-width: 200px;">
+                                        <option value="default">Trier par défaut</option>
+                                        <option value="price-asc">Prix croissant</option>
+                                        <option value="price-desc">Prix décroissant</option>
+                                        <option value="name">Nom</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    optionsContainer.appendChild(filterSection);
+
+                    // Créer les sections pour chaque catégorie
+                    Object.entries(optionsByCategory).forEach(([categoryId, category]) => {
+                        const categorySection = document.createElement('div');
+                        categorySection.className = 'mb-4 category-section';
+                        categorySection.innerHTML = `
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h3 class="h4 mb-0">${category.name}</h3>
+                                <span class="badge bg-primary">${category.options.length} option(s)</span>
+                            </div>
+                            <div class="row g-4" id="category-${categoryId}">
+                            </div>
+                        `;
+                        optionsContainer.appendChild(categorySection);
+
+                        const categoryRow = categorySection.querySelector(`#category-${categoryId}`);
+                        category.options.forEach(option => {
+                            if (option && option.id) {
+                                const optionCard = createOptionCard(option);
+                                categoryRow.appendChild(optionCard);
+                            }
+                        });
                     });
 
-                    optionsContainer.appendChild(row);
+                    // Ajouter les écouteurs d'événements pour les filtres
+                    const searchInput = document.getElementById('optionSearch');
+                    const sortSelect = document.getElementById('sortOptions');
+
+                    searchInput.addEventListener('input', function() {
+                        const searchTerm = this.value.toLowerCase();
+                        document.querySelectorAll('.option-card').forEach(card => {
+                            const title = card.querySelector('.card-title').textContent.toLowerCase();
+                            const description = card.querySelector('.card-text').textContent.toLowerCase();
+                            const category = card.closest('.category-section').querySelector('h3').textContent.toLowerCase();
+                            
+                            const isVisible = title.includes(searchTerm) || 
+                                            description.includes(searchTerm) || 
+                                            category.includes(searchTerm);
+                            
+                            card.style.display = isVisible ? '' : 'none';
+                        });
+
+                        // Masquer les catégories vides
+                        document.querySelectorAll('.category-section').forEach(section => {
+                            const visibleCards = section.querySelectorAll('.option-card:not([style*="display: none"])');
+                            section.style.display = visibleCards.length > 0 ? '' : 'none';
+                        });
+                    });
+
+                    sortSelect.addEventListener('change', function() {
+                        const sortValue = this.value;
+                        document.querySelectorAll('.category-section').forEach(section => {
+                            const categoryRow = section.querySelector('.row');
+                            const cards = Array.from(categoryRow.children);
+
+                            cards.sort((a, b) => {
+                                const priceA = parseFloat(a.querySelector('.option-checkbox').dataset.prix);
+                                const priceB = parseFloat(b.querySelector('.option-checkbox').dataset.prix);
+                                const nameA = a.querySelector('.card-title').textContent;
+                                const nameB = b.querySelector('.card-title').textContent;
+
+                                switch(sortValue) {
+                                    case 'price-asc':
+                                        return priceA - priceB;
+                                    case 'price-desc':
+                                        return priceB - priceA;
+                                    case 'name':
+                                        return nameA.localeCompare(nameB);
+                                    default:
+                                        return 0;
+                                }
+                            });
+
+                            cards.forEach(card => categoryRow.appendChild(card));
+                        });
+                    });
                 } else {
                     optionsContainer.innerHTML = '<div class="col-12"><div class="alert alert-info">Aucune option disponible pour ce véhicule.</div></div>';
                 }
@@ -671,9 +777,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (optionsContainer) optionsContainer.innerHTML = ''; // Vider le conteneur d'options
 
             // Cacher les sections Kit et Options
-            document.getElementById('step-kit').style.display = 'none';
-            document.getElementById('step-options').style.display = 'none';
-            document.getElementById('recap').style.display = 'none'; // Cacher le récapitulatif
+            document.getElementById('step-kit').classList.remove('is-visible');
+            document.getElementById('step-options').classList.remove('is-visible');
+            // document.getElementById('recap').style.display = 'none'; // Cacher le récapitulatif
 
             // Réinitialiser et cacher le récapitulatif
             const recapDetails = document.getElementById('recap-details');
@@ -687,5 +793,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             console.log('Configuration réinitialisée.');
         });
+    }
+
+    // Rendre la section véhicule visible au chargement de la page
+    const vehiculeSection = document.getElementById('step-vehicule');
+    if (vehiculeSection) {
+        vehiculeSection.classList.add('is-visible');
     }
 });

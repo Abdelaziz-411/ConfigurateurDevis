@@ -20,50 +20,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     // Insérer l'option avec un prix par défaut de 0
-                    $stmt = $pdo->prepare("INSERT INTO options (nom, description, prix) VALUES (?, ?, 0.00)");
-                $stmt->execute([$nom, $description]);
-                $id = $pdo->lastInsertId();
+                    $stmt = $pdo->prepare("INSERT INTO options (nom, description, prix, id_categorie) VALUES (?, ?, 0.00, ?)");
+                    $stmt->execute([$nom, $description, $_POST['id_categorie'] ?: null]);
+                    $id = $pdo->lastInsertId();
                 
-                // Ajouter les compatibilités avec les véhicules
-                foreach ($_POST['vehicules'] as $vehicule_id) {
-                        $prix_key = 'prix_' . $vehicule_id;
-                        
-                        // Vérifier si le prix est défini et le convertir en nombre
-                        $prix = 0.00; // Valeur par défaut
-                        if (isset($_POST[$prix_key]) && $_POST[$prix_key] !== '') {
-                            $prix = str_replace(',', '.', $_POST[$prix_key]); // Remplacer la virgule par un point
-                            $prix = floatval($prix);
-                        }
-
-                        // Insérer avec une requête préparée
-                        $stmt = $pdo->prepare("INSERT INTO option_vehicule_compatibilite (id_option, id_vehicule, prix) VALUES (:id_option, :id_vehicule, :prix)");
-                        $stmt->execute([
-                            ':id_option' => $id,
-                            ':id_vehicule' => $vehicule_id,
-                            ':prix' => $prix
-                        ]);
-                }
-                
-                // Gestion des images
-                if (!empty($_FILES['images']['name'][0])) {
-                    foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) {
-                        $file = $_FILES['images']['name'][$key];
-                        $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-                        
-                        if (in_array($ext, ['jpg', 'jpeg', 'png'])) {
-                            $filename = uniqid() . '.' . $ext;
-                            $path = '../images/options/' . $filename;
+                    // Ajouter les compatibilités avec les véhicules
+                    foreach ($_POST['vehicules'] as $vehicule_id) {
+                            $prix_key = 'prix_' . $vehicule_id;
                             
-                            if (move_uploaded_file($tmp_name, $path)) {
-                                $stmt = $pdo->prepare("INSERT INTO option_images (id_option, image_path) VALUES (?, ?)");
-                                $stmt->execute([$id, $filename]);
+                            // Vérifier si le prix est défini et le convertir en nombre
+                            $prix = 0.00; // Valeur par défaut
+                            if (isset($_POST[$prix_key]) && $_POST[$prix_key] !== '') {
+                                $prix = str_replace(',', '.', $_POST[$prix_key]); // Remplacer la virgule par un point
+                                $prix = floatval($prix);
+                            }
+
+                            // Insérer avec une requête préparée
+                            $stmt = $pdo->prepare("INSERT INTO option_vehicule_compatibilite (id_option, id_vehicule, prix) VALUES (:id_option, :id_vehicule, :prix)");
+                            $stmt->execute([
+                                ':id_option' => $id,
+                                ':id_vehicule' => $vehicule_id,
+                                ':prix' => $prix
+                            ]);
+                    }
+                    
+                    // Gestion des images
+                    if (!empty($_FILES['images']['name'][0])) {
+                        foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) {
+                            $file = $_FILES['images']['name'][$key];
+                            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                            
+                            if (in_array($ext, ['jpg', 'jpeg', 'png'])) {
+                                $filename = uniqid() . '.' . $ext;
+                                $path = '../images/options/' . $filename;
+                                
+                                if (move_uploaded_file($tmp_name, $path)) {
+                                    $stmt = $pdo->prepare("INSERT INTO option_images (id_option, image_path) VALUES (?, ?)");
+                                    $stmt->execute([$id, $filename]);
+                                }
                             }
                         }
                     }
-                }
-                
-                header('Location: options.php?success=add');
-                exit;
+                    
+                    header('Location: options.php?success=add');
+                    exit;
                 } catch (PDOException $e) {
                     die("Une erreur est survenue lors de l'ajout de l'option : " . $e->getMessage());
                 } catch (Exception $e) {
@@ -71,8 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } else {
                 $id = $_POST['id'];
-                $stmt = $pdo->prepare("UPDATE options SET nom = ?, description = ? WHERE id = ?");
-                $stmt->execute([$nom, $description, $id]);
+                $stmt = $pdo->prepare("UPDATE options SET nom = ?, description = ?, id_categorie = ? WHERE id = ?");
+                $stmt->execute([$nom, $description, $_POST['id_categorie'] ?: null, $id]);
                 
                 // Mettre à jour les compatibilités avec les véhicules
                 // D'abord supprimer les anciennes
@@ -136,13 +136,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $options = $pdo->query("
     SELECT o.*, 
            GROUP_CONCAT(DISTINCT CONCAT(v.nom, ':', ovc.prix)) as vehicules_prix,
-           GROUP_CONCAT(oi.image_path) as images
+           GROUP_CONCAT(oi.image_path) as images,
+           c.nom as categorie_nom
     FROM options o
     LEFT JOIN option_vehicule_compatibilite ovc ON o.id = ovc.id_option
     LEFT JOIN vehicules v ON ovc.id_vehicule = v.id
     LEFT JOIN option_images oi ON o.id = oi.id_option
+    LEFT JOIN categories_options c ON o.id_categorie = c.id
     GROUP BY o.id
-    ORDER BY o.nom
+    ORDER BY c.ordre, c.nom, o.nom
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 // Transformer les chaînes en tableaux
@@ -206,6 +208,19 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
                     <label for="description" class="form-label">Description</label>
                     <textarea class="form-control" id="description" name="description" rows="3"></textarea>
                 </div>
+
+                <div class="mb-3">
+                    <label for="categorie" class="form-label">Catégorie</label>
+                    <select class="form-select" id="categorie" name="id_categorie">
+                        <option value="">Sélectionner une catégorie</option>
+                        <?php
+                        $categories = $pdo->query("SELECT id, nom FROM categories_options ORDER BY ordre, nom")->fetchAll(PDO::FETCH_ASSOC);
+                        foreach ($categories as $categorie) {
+                            echo '<option value="' . $categorie['id'] . '">' . htmlspecialchars($categorie['nom']) . '</option>';
+                        }
+                        ?>
+                    </select>
+                </div>
                 
                 <div class="mb-3">
                     <label class="form-label">Véhicules compatibles</label>
@@ -252,29 +267,56 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
     document.addEventListener('DOMContentLoaded', function() {
         // Fonction pour gérer l'affichage des champs de prix
         function togglePrixInput(checkbox) {
+            if (!checkbox || !checkbox.value) {
+                console.warn('Checkbox invalide ou sans valeur');
+                return;
+            }
+            
             const vehiculeId = checkbox.value;
             const prixGroup = document.getElementById('prix_group_' + vehiculeId);
             const prixInput = document.getElementById('prix_' + vehiculeId);
             
-            if (prixGroup && prixInput) {
+            if (!prixGroup) {
+                console.warn('Groupe de prix non trouvé pour le véhicule ID:', vehiculeId);
+                return;
+            }
+            
+            if (!prixInput) {
+                console.warn('Champ de prix non trouvé pour le véhicule ID:', vehiculeId);
+                return;
+            }
+            
+            try {
                 prixInput.disabled = !checkbox.checked;
                 prixGroup.style.display = checkbox.checked ? 'flex' : 'none';
+            } catch (error) {
+                console.error('Erreur lors de la mise à jour des champs de prix:', error);
             }
         }
 
-        // Ajouter les écouteurs d'événements aux checkboxes
-        const checkboxes = document.querySelectorAll('.vehicule-check');
-        checkboxes.forEach(checkbox => {
-            // Initialiser l'état des champs de prix pour les checkboxes cochées
-            if (checkbox.checked) {
-                togglePrixInput(checkbox);
+        // Fonction pour initialiser les écouteurs d'événements
+        function initializeEventListeners() {
+            const checkboxes = document.querySelectorAll('.vehicule-check');
+            if (!checkboxes.length) {
+                console.warn('Aucune checkbox de véhicule trouvée');
+                return;
             }
-            
-            // Ajouter l'écouteur d'événement pour les changements futurs
-            checkbox.addEventListener('change', function() {
-                togglePrixInput(this);
+
+            checkboxes.forEach(checkbox => {
+                // Initialiser l'état des champs de prix pour les checkboxes cochées
+                if (checkbox.checked) {
+                    togglePrixInput(checkbox);
+                }
+                
+                // Ajouter l'écouteur d'événement pour les changements futurs
+                checkbox.addEventListener('change', function() {
+                    togglePrixInput(this);
+                });
             });
-        });
+        }
+
+        // Initialiser les écouteurs d'événements
+        initializeEventListeners();
     });
     </script>
 <?php elseif (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])): ?>
@@ -308,6 +350,20 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
                 <div class="mb-3">
                     <label for="description" class="form-label">Description</label>
                     <textarea class="form-control" id="description" name="description" rows="3"><?= htmlspecialchars($option['description']) ?></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="categorie" class="form-label">Catégorie</label>
+                    <select class="form-select" id="categorie" name="id_categorie">
+                        <option value="">Sélectionner une catégorie</option>
+                        <?php
+                        $categories = $pdo->query("SELECT id, nom FROM categories_options ORDER BY ordre, nom")->fetchAll(PDO::FETCH_ASSOC);
+                        foreach ($categories as $categorie) {
+                            $selected = ($categorie['id'] == $option['id_categorie']) ? 'selected' : '';
+                            echo '<option value="' . $categorie['id'] . '" ' . $selected . '>' . htmlspecialchars($categorie['nom']) . '</option>';
+                        }
+                        ?>
+                    </select>
                 </div>
                 
                 <div class="mb-3">
@@ -387,29 +443,56 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
     document.addEventListener('DOMContentLoaded', function() {
         // Fonction pour gérer l'affichage des champs de prix
         function togglePrixInput(checkbox) {
+            if (!checkbox || !checkbox.value) {
+                console.warn('Checkbox invalide ou sans valeur');
+                return;
+            }
+            
             const vehiculeId = checkbox.value;
             const prixGroup = document.getElementById('prix_group_' + vehiculeId);
             const prixInput = document.getElementById('prix_' + vehiculeId);
             
-            if (prixGroup && prixInput) {
+            if (!prixGroup) {
+                console.warn('Groupe de prix non trouvé pour le véhicule ID:', vehiculeId);
+                return;
+            }
+            
+            if (!prixInput) {
+                console.warn('Champ de prix non trouvé pour le véhicule ID:', vehiculeId);
+                return;
+            }
+            
+            try {
                 prixInput.disabled = !checkbox.checked;
                 prixGroup.style.display = checkbox.checked ? 'flex' : 'none';
+            } catch (error) {
+                console.error('Erreur lors de la mise à jour des champs de prix:', error);
             }
         }
 
-        // Ajouter les écouteurs d'événements aux checkboxes
-        const checkboxes = document.querySelectorAll('.vehicule-check');
-        checkboxes.forEach(checkbox => {
-            // Initialiser l'état des champs de prix pour les checkboxes cochées
-            if (checkbox.checked) {
-                togglePrixInput(checkbox);
+        // Fonction pour initialiser les écouteurs d'événements
+        function initializeEventListeners() {
+            const checkboxes = document.querySelectorAll('.vehicule-check');
+            if (!checkboxes.length) {
+                console.warn('Aucune checkbox de véhicule trouvée');
+                return;
             }
-            
-            // Ajouter l'écouteur d'événement pour les changements futurs
-            checkbox.addEventListener('change', function() {
-                togglePrixInput(this);
+
+            checkboxes.forEach(checkbox => {
+                // Initialiser l'état des champs de prix pour les checkboxes cochées
+                if (checkbox.checked) {
+                    togglePrixInput(checkbox);
+                }
+                
+                // Ajouter l'écouteur d'événement pour les changements futurs
+                checkbox.addEventListener('change', function() {
+                    togglePrixInput(this);
+                });
             });
-        });
+        }
+
+        // Initialiser les écouteurs d'événements
+        initializeEventListeners();
     });
 
     function updateOption(event, optionId) {
@@ -443,8 +526,9 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
             <thead>
                 <tr>
                     <th style="width: 15%">Nom</th>
-                    <th style="width: 35%">Description</th>
-                    <th style="width: 25%">Véhicules compatibles</th>
+                    <th style="width: 25%">Description</th>
+                    <th style="width: 15%">Catégorie</th>
+                    <th style="width: 20%">Véhicules compatibles</th>
                     <th style="width: 15%">Images</th>
                     <th style="width: 10%">Actions</th>
                 </tr>
@@ -481,6 +565,14 @@ $vehicules = $pdo->query("SELECT id, nom FROM vehicules ORDER BY nom")->fetchAll
                             </div>
                         </div>
                         <?php endif; ?>
+                    </td>
+                    <td>
+                        <?php
+                        $stmt = $pdo->prepare("SELECT nom FROM categories_options WHERE id = ?");
+                        $stmt->execute([$option['id_categorie']]);
+                        $categorie = $stmt->fetch(PDO::FETCH_COLUMN);
+                        echo $categorie ? htmlspecialchars($categorie) : '<span class="text-muted">Non catégorisé</span>';
+                        ?>
                     </td>
                     <td>
                         <?php if (!empty($option['vehicules_prix'])): ?>

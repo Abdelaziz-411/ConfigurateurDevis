@@ -1,7 +1,7 @@
 /* Variables et styles de base */
 :root {
-    --primary-color: #2c3e50;
-    --secondary-color: #3498db;
+    --primary-color: rgb(207, 137, 109);
+    --secondary-color: #2c3e50;
     --accent-color: #e74c3c;
     --background-color: #f8f9fa;
     --text-color: #2c3e50;
@@ -14,11 +14,32 @@ body {
     background: var(--background-color);
     color: var(--text-color);
     min-height: 100vh;
+    /* Styles personnalisés pour la barre de défilement (Firefox) */
+    /* scrollbar-color: var(--primary-color) var(--background-color); */
+    /* scrollbar-width: thin; */
+}
+
+/* Styles personnalisés pour la barre de défilement (Webkit - Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 10px; /* Largeur de la barre */
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background-color); /* Couleur de fond de la piste */
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-color); /* Couleur du "pouce" (la partie mobile) */
+  border-radius: 5px; /* Bords arrondis */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(180, 110, 85); /* Couleur au survol (un peu plus foncée) */
 }
 
 /* Styles des cartes */
 .card {
-    transition: var(--transition);
+    transition: var(--transition), opacity 0.5s ease-out, transform 0.5s ease-out;
     border: 2px solid transparent;
 }
 
@@ -108,8 +129,10 @@ body {
     }
 }
 
-.card {
-    animation: fadeIn 0.5s ease-out forwards;
+.fade-in-section.is-visible .card {
+    opacity: 1;
+    transform: translateY(0);
+    animation: fadeIn 0.8s ease-out forwards;
 }
 
 /* Styles responsifs */
@@ -306,4 +329,90 @@ footer {
 /* Style pour les prix */
 .option-card .card-text strong {
     color: var(--bs-primary);
+}
+
+/* Styles pour les catégories d'options */
+.option-container h3.h4 {
+    color: var(--bs-primary);
+    border-bottom: 2px solid var(--bs-primary);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.option-container .category-section {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+}
+
+.option-container .category-section:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.option-container .category-section h3 {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.option-container .category-section .badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+}
+
+#optionSearch {
+    border-radius: 20px 0 0 20px;
+    border: 1px solid #dee2e6;
+    padding-left: 1rem;
+}
+
+#optionSearch:focus {
+    box-shadow: none;
+    border-color: #80bdff;
+}
+
+.input-group-text {
+    border-radius: 0 20px 20px 0;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-left: none;
+}
+
+#sortOptions {
+    border-radius: 20px;
+    border: 1px solid #dee2e6;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+}
+
+#sortOptions:focus {
+    box-shadow: none;
+    border-color: #80bdff;
+}
+
+@media (max-width: 768px) {
+    .option-container .category-section {
+        padding: 1rem;
+    }
+
+    #optionSearch, #sortOptions {
+        font-size: 0.9rem;
+    }
+
+    .option-container .category-section h3 {
+        font-size: 1.1rem;
+    }
+}
+
+/* Styles pour les sections qui apparaissent progressivement */
+.fade-in-section {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.5s ease-out, visibility 0.5s ease-out; /* Transition en douceur */
+}
+
+.fade-in-section.is-visible {
+    opacity: 1;
+    visibility: visible;
 }
