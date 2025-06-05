@@ -27,7 +27,7 @@ $stats = [
 
 <div class="actions">
     <h2>Actions rapides</h2>
-    <a href="vehicules.php?action=add" class="btn btn-success">Ajouter un véhicule</a>
+    <a href="modeles.php" class="btn btn-success">Ajouter un véhicule</a>
     <a href="kits.php?action=add" class="btn btn-success">Ajouter un kit</a>
     <a href="options.php?action=add" class="btn btn-success">Ajouter une option</a>
 </div>

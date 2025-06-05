@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Création des images par défaut</title>
+    <style>
+        canvas {
+            border: 1px solid #ccc;
+            margin: 10px;
+        }
+        .image-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 20px;
+        }
+        .image-item {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="image-container">
+        <div class="image-item">
+            <canvas id="default-marque" width="400" height="300"></canvas>
+            <p>default-marque.png</p>
+        </div>
+        <div class="image-item">
+            <canvas id="default-modele" width="400" height="300"></canvas>
+            <p>default-modele.png</p>
+        </div>
+        <div class="image-item">
+            <canvas id="autre-marque" width="400" height="300"></canvas>
+            <p>autre-marque.png</p>
+        </div>
+        <div class="image-item">
+            <canvas id="autre-modele" width="400" height="300"></canvas>
+            <p>autre-modele.png</p>
+        </div>
+    </div>
+
+    <script>
+        function createImage(canvasId, text, bgColor, textColor) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // Remplir le fond
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Ajouter le texte
+            ctx.fillStyle = textColor;
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, canvas.width/2, canvas.height/2);
+            
+            // Télécharger l'image
+            const link = document.createElement('a');
+            link.download = canvasId + '.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // Créer les images
+        createImage('default-marque', 'Image de marque par défaut', '#f0f0f0', '#646464');
+        createImage('default-modele', 'Image de modèle par défaut', '#f5f5f5', '#787878');
+        createImage('autre-marque', 'Autre marque', '#e6e6e6', '#505050');
+        createImage('autre-modele', 'Autre modèle', '#ebebeb', '#5a5a5a');
+    </script>
+</body>
+</html> 

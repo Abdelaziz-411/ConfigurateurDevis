@@ -10,9 +10,8 @@ if (isset($_POST['devis_id']) && isset($_POST['statut'])) {
 
 // Récupération des devis
 $stmt = $pdo->query("
-    SELECT d.*, v.nom as vehicule_nom, k.nom as kit_nom
+    SELECT d.*, d.type_carrosserie, k.nom as kit_nom
     FROM devis d
-    LEFT JOIN vehicules v ON d.id_vehicule = v.id
     LEFT JOIN kits k ON d.id_kit = k.id
     ORDER BY d.date_creation DESC
 ");
@@ -96,7 +95,7 @@ $devis = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <th>Date</th>
                     <th>Client</th>
                     <th>Contact</th>
-                    <th>Véhicule</th>
+                    <th>Type de carrosserie</th>
                     <th>Kit</th>
                     <th>Prix TTC</th>
                     <th>Statut</th>
@@ -113,7 +112,7 @@ $devis = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <a href="mailto:<?= htmlspecialchars($d['email']) ?>"><?= htmlspecialchars($d['email']) ?></a><br>
                             <small><?= htmlspecialchars($d['telephone']) ?></small>
                         </td>
-                        <td><?= htmlspecialchars($d['vehicule_nom']) ?></td>
+                        <td><?= htmlspecialchars($d['type_carrosserie']) ?></td>
                         <td><?= $d['kit_nom'] ? htmlspecialchars($d['kit_nom']) : '-' ?></td>
                         <td><?= number_format($d['prix_ttc'], 2, ',', ' ') ?> €</td>
                         <td>
@@ -172,7 +171,7 @@ $devis = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         <div class="col-md-6">
                                             <h6>Détails de la configuration</h6>
                                             <p>
-                                                <strong>Véhicule :</strong> <?= htmlspecialchars($d['vehicule_nom']) ?><br>
+                                                <strong>Type de carrosserie :</strong> <?= htmlspecialchars($d['type_carrosserie']) ?><br>
                                                 <strong>Kit :</strong> <?= $d['kit_nom'] ? htmlspecialchars($d['kit_nom']) : '-' ?><br>
                                                 <strong>Prix HT :</strong> <?= number_format($d['prix_ht'], 2, ',', ' ') ?> €<br>
                                                 <strong>Prix TTC :</strong> <?= number_format($d['prix_ttc'], 2, ',', ' ') ?> €
@@ -455,7 +454,7 @@ document.getElementById('dateRange').addEventListener('change', filterDevis);
 function exportDevis() {
     const rows = Array.from(document.querySelectorAll('tbody tr')).filter(row => row.style.display !== 'none');
     const csvContent = [
-        ['ID', 'Date', 'Client', 'Contact', 'Véhicule', 'Kit', 'Prix TTC', 'Statut'].join(','),
+        ['ID', 'Date', 'Client', 'Contact', 'Type de carrosserie', 'Kit', 'Prix TTC', 'Statut'].join(','),
         ...rows.map(row => {
             const cells = row.querySelectorAll('td');
             return [
