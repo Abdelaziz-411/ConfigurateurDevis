@@ -3,38 +3,47 @@ require_once 'config.php';
 
 header('Content-Type: application/json');
 
-// Modifier pour utiliser le type_carrosserie au lieu de vehicule_id
-if (!isset($_GET['type_carrosserie']) || empty($_GET['type_carrosserie'])) {
-    http_response_code(400);
-    echo json_encode(['error' => 'Type de carrosserie manquant']);
+// Accepter le paramètre 'statuts' qui peut être un tableau
+$statuts = $_GET['statuts'] ?? [];
+
+// Vérifier si des statuts ont été fournis et qu'il s'agit bien d'un tableau non vide
+if (!is_array($statuts) || empty($statuts)) {
+    // Si aucun statut n'est fourni ou si le paramètre n'est pas un tableau, retourner une liste vide de kits.
+    echo json_encode(['success' => true, 'kits' => []]);
     exit;
 }
 
-try {
-    // Le type_carrosserie est maintenant directement reçu
-    $type_carrosserie = $_GET['type_carrosserie'];
+// Créer une chaîne de placeholders pour la clause IN
+$placeholders = implode(', ', array_fill(0, count($statuts), '?'));
 
-    // Récupérer les kits avec leurs prix pour le type de carrosserie donné
-    $stmt = $pdo->prepare("
+try {
+    // Récupérer les kits avec leurs prix pour les types de carrosserie donnés
+    // Utiliser WHERE IN pour les statuts et passer les statuts comme paramètres à execute
+    $sql = "
         SELECT k.*,
                GROUP_CONCAT(DISTINCT ki.image_path) as images,
                kvc.prix
         FROM kits k
         LEFT JOIN kit_images ki ON k.id = ki.id_kit
-        LEFT JOIN kit_vehicule_compatibilite kvc ON k.id = kvc.id_kit AND kvc.type_carrosserie = ?
+        JOIN kit_vehicule_compatibilite kvc ON k.id = kvc.id_kit
+        WHERE kvc.type_carrosserie IN ($placeholders)
         GROUP BY k.id
         ORDER BY k.nom
-    ");
-    $stmt->execute([$type_carrosserie]);
-    $kits = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    ";
+    
+    $stmt = $pdo->prepare($sql);
+    // Passer le tableau de statuts directement à execute
+    $stmt->execute($statuts);
 
+    $kits = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
     // Transformer les chaînes d'images en tableaux et formater les prix
     foreach ($kits as &$kit) {
-        $kit['images'] = $kit['images'] ? array_map(function($image) { return 'images/kits/' . $image; }, explode(',', $kit['images'])) : [];
+        $kit['images'] = $kit['images'] ? array_map(function($image) { return 'images/kits/' . htmlspecialchars($image); }, explode(',', $kit['images'])) : [];
         $kit['prix'] = floatval($kit['prix'] ?? 0); // Utiliser 0 si prix est null
     }
-
-    echo json_encode(['success' => true, 'kits' => $kits]); // Ajouter une enveloppe de succès
+    
+    echo json_encode(['success' => true, 'kits' => $kits]);
 
 } catch (PDOException $e) {
     http_response_code(500);

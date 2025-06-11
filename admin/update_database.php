@@ -2,14 +2,13 @@
 require '../config.php';
 
 try {
-    // Ajouter la colonne has_vehicle à la table devis
-    $pdo->exec("ALTER TABLE devis ADD COLUMN has_vehicle BOOLEAN DEFAULT NULL AFTER id");
+    // Lire le fichier SQL
+    $sql = file_get_contents('update_database_for_carrosserie.sql');
     
-    echo "La colonne has_vehicle a été ajoutée avec succès à la table devis.";
+    // Exécuter les requêtes SQL
+    $pdo->exec($sql);
+    
+    echo "La base de données a été mise à jour avec succès.";
 } catch (PDOException $e) {
-    if ($e->getCode() == '42S21') {
-        echo "La colonne has_vehicle existe déjà.";
-    } else {
-        echo "Erreur : " . $e->getMessage();
-    }
+    echo "Erreur lors de la mise à jour de la base de données : " . $e->getMessage();
 } 

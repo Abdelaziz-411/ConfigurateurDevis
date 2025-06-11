@@ -1,271 +1,349 @@
 <?php
 require 'header.php';
-require 'check_auth.php';
 
-// Récupérer les modèles avec leurs images et marques associées
+// Récupérer les modèles avec leurs images, marques et statuts associés
 try {
-    $stmt = $pdo->query("SELECT m.*, ma.nom as marque_nom, GROUP_CONCAT(CONCAT('../images/modeles/', mi.image_path)) as images FROM modeles m LEFT JOIN marques ma ON m.id_marque = ma.id LEFT JOIN modele_images mi ON m.id = mi.id_modele GROUP BY m.id ORDER BY ma.nom, m.nom");
-    $modeles = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    error_log("Données modèles récupérées (admin/modeles.php) : " . print_r($modeles, true));
+    // Vérifier si la table modeles existe
+    $checkTable = $pdo->query("SHOW TABLES LIKE 'modeles'");
+    if ($checkTable->rowCount() === 0) {
+        // Créer la table modeles
+        $pdo->exec("CREATE TABLE IF NOT EXISTS modeles (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            id_marque INT NOT NULL,
+            nom VARCHAR(255) NOT NULL,
+            type_carrosserie VARCHAR(50) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (id_marque) REFERENCES marques(id) ON DELETE CASCADE
+        )");
+    }
+    
+    // Vérifier si la table modele_images existe
+    $checkImageTable = $pdo->query("SHOW TABLES LIKE 'modele_images'");
+     if ($checkImageTable->rowCount() === 0) {
+         // Créer la table modele_images
+         $pdo->exec("CREATE TABLE IF NOT EXISTS modele_images (
+             id INT AUTO_INCREMENT PRIMARY KEY,
+             id_modele INT NOT NULL,
+             image_path VARCHAR(255) NOT NULL,
+             FOREIGN KEY (id_modele) REFERENCES modeles(id) ON DELETE CASCADE
+         )");
+     }
+
+    // Vérifier si la table modele_statuts existe
+    $checkStatutTable = $pdo->query("SHOW TABLES LIKE 'modele_statuts'");
+    if ($checkStatutTable->rowCount() === 0) {
+        // Créer la table modele_statuts
+        $pdo->exec("CREATE TABLE IF NOT EXISTS modele_statuts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            id_modele INT NOT NULL,
+            statut VARCHAR(50) NOT NULL,
+            FOREIGN KEY (id_modele) REFERENCES modeles(id) ON DELETE CASCADE,
+            UNIQUE (id_modele, statut) -- Empêche les doublons
+        )");
+    }
+
+    $sql = "SELECT m.*, 
+            ma.nom as marque_nom,
+            GROUP_CONCAT(DISTINCT mi.image_path) as images,
+            GROUP_CONCAT(DISTINCT ms.statut) as statuts
+            FROM modeles m
+            LEFT JOIN marques ma ON m.id_marque = ma.id
+            LEFT JOIN modele_images mi ON m.id = mi.id_modele
+            LEFT JOIN modele_statuts ms ON m.id = ms.id_modele
+            GROUP BY m.id
+            ORDER BY ma.nom, m.nom";
+    
+    $stmt = $pdo->query($sql);
+    $modeles = $stmt->fetchAll();
+    
+    // Transformer les données
     foreach ($modeles as &$modele) {
         $modele['images'] = $modele['images'] ? explode(',', $modele['images']) : [];
-        error_log("Images traitées pour modèle " . $modele['id'] . " : " . print_r($modele['images'], true));
+        $modele['statuts'] = $modele['statuts'] ? explode(',', $modele['statuts']) : [];
     }
-} catch (PDOException $e) {
-    die("Erreur lors de la récupération des modèles : " . $e->getMessage());
+} catch (Exception $e) {
+    die("Une erreur est survenue : " . $e->getMessage());
 }
 
+// Récupérer la liste des marques pour le formulaire
+$marques = $pdo->query("SELECT * FROM marques ORDER BY nom")->fetchAll(PDO::FETCH_ASSOC);
+
+// Liste des statuts de carrosserie possibles (L1H1, etc.)
+$statuts_possibles = [
+    'L1H1',
+    'L1H2',
+    'L2H1',
+    'L2H2',
+    'L3H2',
+    'L3H3'
+];
+
+// Gestion des actions
 $action = $_GET['action'] ?? 'list';
 $id = $_GET['id'] ?? null;
 $message = '';
 
-// Statuts de véhicule possibles
-$statuts = ['L1H1', 'L2H1', 'L2H2', 'L3H2', 'L3H3', 'L4H3'];
+// Traitement du formulaire
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['action'])) {
+        if ($_POST['action'] === 'add' || $_POST['action'] === 'edit') {
+            $nom = $_POST['nom'];
+            $id_marque = $_POST['id_marque'];
+            // La colonne type_carrosserie dans la table modeles pourrait stocker un statut principal ou être ignorée si tous les statuts sont dans modele_statuts.
+            // Pour l'instant, on peut la laisser et potentiellement la rendre nullable ou stocker une valeur par défaut.
+            // Si on la garde, on pourrait prendre le premier statut sélectionné ou une valeur générique.
+            // Pour la gestion de la compatibilité multi-statuts, on va se fier à la nouvelle table modele_statuts.
+            // On peut stocker le premier statut sélectionné ici pour la rétrocompatibilité ou l'ignorer.
+            $premier_statut = !empty($_POST['statuts']) ? $_POST['statuts'][0] : ''; 
+            
+            if ($_POST['action'] === 'add') {
+                try {
+                    // Insérer le modèle dans la table modeles
+                    $stmt = $pdo->prepare("INSERT INTO modeles (nom, id_marque, type_carrosserie) VALUES (?, ?, ?)"); 
+                    $stmt->execute([$nom, $id_marque, $premier_statut]); // Utilisation du premier statut ou vide
+                    $id = $pdo->lastInsertId();
+                    
+                    // Insérer les statuts sélectionnés dans la table modele_statuts
+                    if (!empty($_POST['statuts'])) {
+                        $stmt_statut = $pdo->prepare("INSERT INTO modele_statuts (id_modele, statut) VALUES (?, ?)");
+                        foreach ($_POST['statuts'] as $statut) {
+                            $stmt_statut->execute([$id, $statut]);
+                        }
+                    }
+                    
+                    // Gestion des images
+                    if (!empty($_FILES['images']['name'][0])) {
+                        // Créer le dossier s'il n'existe pas
+                        $upload_dir = '../images/modeles/';
+                        if (!file_exists($upload_dir)) {
+                            mkdir($upload_dir, 0777, true);
+                        }
+                        
+                        foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) {
+                            $file = $_FILES['images']['name'][$key];
+                            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                            
+                            if (in_array($ext, ['jpg', 'jpeg', 'png'])) {
+                                $filename = uniqid() . '.' . $ext;
+                                $path = $upload_dir . $filename;
+                                
+                                if (move_uploaded_file($tmp_name, $path)) {
+                                    $stmt = $pdo->prepare("INSERT INTO modele_images (id_modele, image_path) VALUES (?, ?)");
+                                    $stmt->execute([$id, $filename]);
+                                }
+                            }
+                        }
+                    }
+                    
+                    header('Location: modeles.php?success=add');
+                    exit;
+                } catch (Exception $e) {
+                    $message = "Erreur lors de l'ajout du modèle : " . $e->getMessage();
+                }
+            } else { // action === 'edit'
+                try {
+                    $id = $_POST['id'];
+                    
+                    // Mettre à jour le modèle dans la table modeles
+                    $stmt = $pdo->prepare("UPDATE modeles SET nom = ?, id_marque = ?, type_carrosserie = ? WHERE id = ?"); // Utilisation du premier statut ou vide
+                    $stmt->execute([$nom, $id_marque, $premier_statut, $id]);
+                    
+                    // Supprimer les anciens statuts du modèle
+                    $stmt_delete_statuts = $pdo->prepare("DELETE FROM modele_statuts WHERE id_modele = ?");
+                    $stmt_delete_statuts->execute([$id]);
 
-?>
-
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Gestion des Modèles</h2>
-    <a href="?action=add" class="btn btn-primary">
-        <i class="bi bi-plus-lg"></i> Ajouter un modèle
-    </a>
-</div>
-
-<?php if (isset($_GET['success'])): ?>
-    <div class="alert alert-success">
-        <?php
-        switch ($_GET['success']) {
-            case 'add':
-                echo 'Modèle ajouté avec succès.';
-                break;
-            case 'edit':
-                echo 'Modèle modifié avec succès.';
-                break;
-            case 'delete':
-                echo 'Modèle supprimé avec succès.';
-                break;
+                    // Insérer les nouveaux statuts sélectionnés
+                    if (!empty($_POST['statuts'])) {
+                        $stmt_statut = $pdo->prepare("INSERT INTO modele_statuts (id_modele, statut) VALUES (?, ?)");
+                        foreach ($_POST['statuts'] as $statut) {
+                             // Utiliser INSERT IGNORE pour éviter les erreurs si un statut existe déjà (bien que le DELETE avant l'empêche normalement) ou gérer l'exception UNIQUE.
+                             // Pour plus de robustesse, un INSERT IGNORE ou un try/catch sur execute est préférable.
+                             try {
+                                $stmt_statut->execute([$id, $statut]);
+                             } catch (PDOException $e) {
+                                 // Ignorer l'erreur de duplicata si la contrainte UNIQUE est violée
+                                 if ($e->getCode() != '23000') { // SQLSTATE 23000 est pour l'intégrité contrainte violation
+                                     throw $e; // Relancer si ce n'est pas une erreur de duplicata
+                                 }
+                             }
+                        }
+                    }
+                    
+                    // Gestion des images
+                    if (!empty($_FILES['images']['name'][0])) {
+                        // Créer le dossier s'il n'existe pas
+                        $upload_dir = '../images/modeles/';
+                        if (!file_exists($upload_dir)) {
+                            mkdir($upload_dir, 0777, true);
+                        }
+                        
+                        foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) {
+                            $file = $_FILES['images']['name'][$key];
+                            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                            
+                            if (in_array($ext, ['jpg', 'jpeg', 'png'])) {
+                                $filename = uniqid() . '.' . $ext;
+                                $path = $upload_dir . $filename;
+                                
+                                if (move_uploaded_file($tmp_name, $path)) {
+                                    $stmt = $pdo->prepare("INSERT INTO modele_images (id_modele, image_path) VALUES (?, ?)");
+                                    $stmt->execute([$id, $filename]);
+                                }
+                            }
+                        }
+                    }
+                    
+                    header('Location: modeles.php?success=edit');
+                    exit;
+                } catch (Exception $e) {
+                    $message = "Erreur lors de la modification du modèle : " . $e->getMessage();
+                }
+            }
+        } elseif ($_POST['action'] === 'delete') {
+            try {
+                $id = $_POST['id'];
+                
+                // Récupérer les images du modèle
+                $stmt = $pdo->prepare("SELECT image_path FROM modele_images WHERE id_modele = ?");
+                $stmt->execute([$id]);
+                $images = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                
+                // Supprimer les fichiers physiques
+                foreach ($images as $image) {
+                    $path = "../images/modeles/" . $image;
+                    if (file_exists($path)) {
+                        unlink($path);
+                    }
+                }
+                
+                // Supprimer les enregistrements de la base de données
+                // Les suppressions dans modele_images et modele_statuts sont gérées par ON DELETE CASCADE
+                $pdo->beginTransaction();
+                
+                // Supprimer le modèle (ce qui cascade la suppression des images et statuts)
+                $stmt = $pdo->prepare("DELETE FROM modeles WHERE id = ?");
+                $stmt->execute([$id]);
+                
+                $pdo->commit();
+                
+                header('Location: modeles.php?success=delete');
+                exit;
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $message = "Erreur lors de la suppression du modèle : " . $e->getMessage();
+            }
         }
-        ?>
-    </div>
-<?php endif; ?>
-
-<?php if ($action === 'add'): ?>
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Ajouter un modèle</h3>
-        </div>
-        <div class="card-body">
-            <form action="save-modele.php" method="POST" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label for="nom" class="form-label">Nom du modèle</label>
-                    <input type="text" class="form-control" id="nom" name="nom" required>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="id_marque" class="form-label">Marque</label>
-                    <select class="form-select" id="id_marque" name="id_marque" required>
-                        <option value="">Sélectionner une marque</option>
-                        <?php
-                        $marques = $pdo->query("SELECT id, nom FROM marques ORDER BY nom")->fetchAll(PDO::FETCH_ASSOC);
-                        foreach ($marques as $marque) {
-                            echo '<option value="' . $marque['id'] . '">' . htmlspecialchars($marque['nom']) . '</option>';
-                        }
-                        ?>
-                    </select>
-                </div>
-
-                 <div class="mb-3">
-                    <label for="status" class="form-label">Statut</label>
-                    <select class="form-select" id="status" name="status">
-                        <option value="">Sélectionner un statut (Optionnel)</option>
-                        <?php foreach ($statuts as $statut): ?>
-                            <option value="<?= $statut ?>"><?= $statut ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="images" class="form-label">Photos du modèle</label>
-                    <input type="file" class="form-control" id="images" name="images[]" multiple accept="image/*">
-                </div>
-                
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">Ajouter</button>
-                    <a href="modeles.php" class="btn btn-secondary">Annuler</a>
-                </div>
-            </form>
-        </div>
-    </div>
-<?php elseif ($action === 'edit' && $id): ?>
-    <?php
-    $stmt = $pdo->prepare("SELECT m.*, GROUP_CONCAT(mi.image_path) as images FROM modeles m LEFT JOIN modele_images mi ON m.id = mi.id_modele WHERE m.id = ? GROUP BY m.id");
-    $stmt->execute([$id]);
-    $modele = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($modele) {
-         $modele['images'] = $modele['images'] ? explode(',', $modele['images']) : [];
     }
-    ?>
-    <?php if ($modele): ?>
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Modifier le modèle : <?= htmlspecialchars($modele['nom']) ?></h3>
-        </div>
-        <div class="card-body">
-            <form action="update-modele.php" method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="id" value="<?= $modele['id'] ?>">
-                
-                <div class="mb-3">
-                    <label for="nom" class="form-label">Nom du modèle</label>
-                    <input type="text" class="form-control" id="nom" name="nom" value="<?= htmlspecialchars($modele['nom']) ?>" required>
-                </div>
+}
 
-                <div class="mb-3">
-                    <label for="id_marque" class="form-label">Marque</label>
-                    <select class="form-select" id="id_marque" name="id_marque" required>
-                         <option value="">Sélectionner une marque</option>
-                        <?php
-                        $marques = $pdo->query("SELECT id, nom FROM marques ORDER BY nom")->fetchAll(PDO::FETCH_ASSOC);
-                        foreach ($marques as $marque) {
-                            $selected = ($marque['id'] == $modele['id_marque']) ? 'selected' : '';
-                            echo '<option value="' . $marque['id'] . '" ' . $selected . '>' . htmlspecialchars($marque['nom']) . '</option>';
-                        }
-                        ?>
-                    </select>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="status" class="form-label">Statut</label>
-                    <select class="form-select" id="status" name="status">
-                        <option value="">Sélectionner un statut (Optionnel)</option>
-                        <?php foreach ($statuts as $statut): ?>
-                            <option value="<?= $statut ?>" <?= ($modele['status'] === $statut) ? 'selected' : '' ?>><?= $statut ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="images" class="form-label">Ajouter des photos</label>
-                    <input type="file" class="form-control" id="images" name="images[]" multiple accept="image/*">
-                </div>
+// Affichage de la page
+if ($action === 'list') {
+    include 'templates/modeles/list.php';
+} elseif ($action === 'edit' && isset($_GET['id'])) {
+    // Récupérer les données du modèle pour le formulaire d'édition
+    $stmt = $pdo->prepare("SELECT m.*, 
+                          GROUP_CONCAT(mi.image_path) as images,
+                          GROUP_CONCAT(ms.statut) as statuts -- Récupérer les statuts associés
+                          FROM modeles m
+                          LEFT JOIN modele_images mi ON m.id = mi.id_modele
+                          LEFT JOIN modele_statuts ms ON m.id = ms.id_modele
+                          WHERE m.id = ?
+                          GROUP BY m.id");
+    $stmt->execute([$id]);
+    $modele_edit = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$modele_edit) {
+        // Rediriger si le modèle n'est pas trouvé
+        header('Location: modeles.php');
+        exit;
+    }
+    
+    // Transformer les données (images et statuts)
+    $modele_edit['images'] = $modele_edit['images'] ? explode(',', $modele_edit['images']) : [];
+    $modele_edit['statuts'] = $modele_edit['statuts'] ? explode(',', $modele_edit['statuts']) : [];
+    
+    include 'templates/modeles/edit.php';
+} elseif ($action === 'add') {
+    include 'templates/modeles/add.php';
+}
 
-                <?php if (!empty($modele['images'])): ?>
-                <div class="mb-3">
-                    <label class="form-label">Photos actuelles</label>
-                    <div class="row g-2" id="current-images-<?= $modele['id'] ?>">
-                        <?php foreach ($modele['images'] as $image_path): ?>
-                        <div class="col-auto image-preview-item">
-                            <div class="position-relative">
-                                <img src="<?= htmlspecialchars($image_path) ?>" class="img-thumbnail" style="height: 100px;">
-                                <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 delete-image" 
-                                        data-id="<?= $modele['id'] ?>" data-type="modele" data-image="<?= htmlspecialchars($image_path) ?>">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-                <?php endif; ?>
-                
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">Enregistrer</button>
-                    <a href="modeles.php" class="btn btn-secondary">Annuler</a>
-                </div>
-            </form>
-        </div>
-    </div>
-    <?php else: ?>
-    <div class="alert alert-danger">Modèle non trouvé.</div>
-    <?php endif; ?>
-<?php else: ?>
-    <div class="table-responsive">
-        <table class="table table-striped align-middle">
-            <thead>
-                <tr>
-                    <th>Nom</th>
-                    <th>Marque</th>
-                    <th>Statut</th>
-                    <th>Photos</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($modeles as $modele): ?>
-                <tr>
-                    <td><?= htmlspecialchars($modele['nom']) ?></td>
-                    <td><?= htmlspecialchars($modele['marque_nom']) ?></td>
-                     <td><?= htmlspecialchars($modele['status'] ?? '') ?></td>
-                    <td>
-                        <?php if (!empty($modele['images'])): ?>
-                            <div class="d-flex gap-1">
-                                <?php foreach (array_slice($modele['images'], 0, 3) as $image_path): ?>
-                                    <img src="<?= htmlspecialchars($image_path) ?>" class="img-thumbnail" style="height: 50px;">
-                                <?php endforeach; ?>
-                                <?php if (count($modele['images']) > 3): ?>
-                                    <span class="badge bg-secondary">+<?= count($modele['images']) - 3 ?></span>
-                                <?php endif; ?>
-                            </div>
-                        <?php else: ?>
-                            <span class="text-muted">Aucune image</span>
-                        <?php endif; ?>
-                    </td>
-                    <td>
-                        <div class="btn-group">
-                            <a href="?action=edit&id=<?= $modele['id'] ?>" class="btn btn-sm btn-primary" title="Modifier">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-                             <button type="button" class="btn btn-sm btn-danger" title="Supprimer"
-                                    onclick="if(confirm('Êtes-vous sûr de vouloir supprimer ce modèle ?')) { 
-                                        document.getElementById('delete-form-<?= $modele['id'] ?>').submit(); 
-                                    }">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                        <form id="delete-form-<?= $modele['id'] ?>" action="delete-modele.php" method="POST" style="display: none;">
-                            <input type="hidden" name="id" value="<?= $modele['id'] ?>">
-                        </form>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
+// Styles et scripts communs
+?>
+<style>
+.preview-image {
+    display: inline-block;
+    margin: 5px;
+    text-align: center;
+}
+
+.preview-image img {
+    max-width: 100px;
+    height: auto;
+}
+
+.img-thumbnail {
+    object-fit: cover;
+    width: 100px;
+    height: 100px;
+}
+
+.btn-group {
+    gap: 0.25rem;
+}
+
+.alert {
+    margin-bottom: 1rem;
+}
+
+.table-responsive {
+    margin-bottom: 1rem;
+}
+
+.table th {
+    white-space: nowrap;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.statut-tags span {
+    display: inline-block;
+    background-color: #e9ecef;
+    color: #495057;
+    border-radius: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    margin-right: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+</style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.delete-image').forEach(button => {
-        button.addEventListener('click', function() {
-            const imageId = this.dataset.id; // ID du modèle dans ce cas pour le script actuel
-            const type = this.dataset.type;
-            const imageName = this.dataset.image;
-            
-            if (confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) {
-                // Note: Le script delete_image.php a été mis à jour pour gérer le type 'modele'
-                fetch('delete_image.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `id=${imageId}&type=${type}&image=${imageName}` // Envoyer l'ID et le nom de l'image
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        this.closest('.image-preview-item').remove();
-                    } else {
-                        alert('Erreur lors de la suppression de l\'image : ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Erreur:', error);
-                    alert('Erreur lors de la suppression de l\'image');
-                });
+// Fonction pour afficher les images en prévisualisation
+function previewImages(input) {
+    const previewContainer = document.getElementById('imagePreview');
+    previewContainer.innerHTML = '';
+    
+    if (input.files) {
+        Array.from(input.files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const div = document.createElement('div');
+                div.className = 'preview-image';
+                div.innerHTML = `
+                    <img src="${e.target.result}" class="img-thumbnail" style="height: 100px;">
+                    <button type="button" class="btn btn-sm btn-danger mt-1" onclick="this.parentElement.remove()">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                `;
+                previewContainer.appendChild(div);
             }
+            reader.readAsDataURL(file);
         });
-    });
-});
+    }
+}
 </script>
-
-<?php endif; ?>
 
 <?php require 'footer.php'; ?> 

@@ -131,17 +131,17 @@ $devis = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <input type="hidden" name="devis_id" value="<?= $d['id'] ?>">
                                     <button type="submit" class="btn btn-info btn-sm" title="Envoyer par email">
                                         <i class="bi bi-envelope"></i>
-                                    </button>
+                            </button>
                                 </form>
                                 <a href="edit_devis.php?id=<?= $d['id'] ?>" class="btn btn-primary btn-sm" title="Modifier">
-                                    <i class="bi bi-pencil"></i>
+                                <i class="bi bi-pencil"></i>
                                 </a>
                                 <button type="button" class="btn btn-danger btn-sm" onclick="deleteDevis(<?= $d['id'] ?>)" title="Supprimer">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                                <i class="bi bi-trash"></i>
+                            </button>
                                 <a href="../generate-pdf.php?devis_id=<?= $d['id'] ?>" class="btn btn-secondary btn-sm" target="_blank" title="Télécharger PDF">
-                                    <i class="bi bi-file-pdf"></i>
-                                </a>
+                                <i class="bi bi-file-pdf"></i>
+                            </a>
                             </div>
                         </td>
                     </tr>

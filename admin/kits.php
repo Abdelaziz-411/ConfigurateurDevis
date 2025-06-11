@@ -19,7 +19,7 @@ try {
             prix DECIMAL(10,2) DEFAULT 0.00,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )");
-        
+
         // Créer la table kit_vehicule_compatibilite
         $pdo->exec("CREATE TABLE IF NOT EXISTS kit_vehicule_compatibilite (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -72,10 +72,10 @@ try {
     $sql = "SELECT k.*, 
             GROUP_CONCAT(DISTINCT kvc.type_carrosserie) as types_carrosserie,
             GROUP_CONCAT(DISTINCT CONCAT(kvc.type_carrosserie, ':', kvc.prix)) as types_prix,
-            GROUP_CONCAT(DISTINCT ki.image_path) as images
-            FROM kits k
-            LEFT JOIN kit_vehicule_compatibilite kvc ON k.id = kvc.id_kit
-            LEFT JOIN kit_images ki ON k.id = ki.id_kit
+               GROUP_CONCAT(DISTINCT ki.image_path) as images
+        FROM kits k
+        LEFT JOIN kit_vehicule_compatibilite kvc ON k.id = kvc.id_kit
+        LEFT JOIN kit_images ki ON k.id = ki.id_kit
             GROUP BY k.id";
     
     error_log("Requête SQL : " . $sql);
@@ -209,7 +209,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } elseif ($_POST['action'] === 'edit') {
                 try {
-                    $id = $_POST['id'];
+                $id = $_POST['id'];
                     $nom = $_POST['nom'];
                     $description = $_POST['description'];
                     
@@ -218,76 +218,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     
                     // Mettre à jour le kit
-                    $stmt = $pdo->prepare("UPDATE kits SET nom = ?, description = ? WHERE id = ?");
-                    $stmt->execute([$nom, $description, $id]);
-                    
+                $stmt = $pdo->prepare("UPDATE kits SET nom = ?, description = ? WHERE id = ?");
+                $stmt->execute([$nom, $description, $id]);
+                
                     // Supprimer les anciennes compatibilités
-                    $stmt = $pdo->prepare("DELETE FROM kit_vehicule_compatibilite WHERE id_kit = ?");
-                    $stmt->execute([$id]);
-                    
+                $stmt = $pdo->prepare("DELETE FROM kit_vehicule_compatibilite WHERE id_kit = ?");
+                $stmt->execute([$id]);
+                
                     // Ajouter les nouvelles compatibilités
                     foreach ($_POST['types'] as $type) {
                         $prix_key = 'prix_' . md5($type);
-                        
-                        // Vérifier si le prix est défini et le convertir en nombre
+                    
+                    // Vérifier si le prix est défini et le convertir en nombre
                         $prix = 0.00; // Valeur par défaut
                         if (isset($_POST[$prix_key]) && $_POST[$prix_key] !== '') {
                             $prix = str_replace(',', '.', $_POST[$prix_key]);
-                            $prix = floatval($prix);
-                        }
-                        
-                        // Insérer avec une requête préparée
+                        $prix = floatval($prix);
+                    }
+
+                    // Insérer avec une requête préparée
                         $stmt = $pdo->prepare("INSERT INTO kit_vehicule_compatibilite (id_kit, type_carrosserie, prix) VALUES (?, ?, ?)");
                         $stmt->execute([$id, $type, $prix]);
-                    }
-                    
-                    // Gestion des images
-                    if (!empty($_FILES['images']['name'][0])) {
+                }
+                
+                // Gestion des images
+                if (!empty($_FILES['images']['name'][0])) {
                         // Créer le dossier s'il n'existe pas
                         $upload_dir = '../images/kits/';
                         if (!file_exists($upload_dir)) {
                             mkdir($upload_dir, 0777, true);
                         }
                         
-                        foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) {
-                            $file = $_FILES['images']['name'][$key];
-                            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-                            
-                            if (in_array($ext, ['jpg', 'jpeg', 'png'])) {
-                                $filename = uniqid() . '.' . $ext;
+                    foreach ($_FILES['images']['tmp_name'] as $key => $tmp_name) {
+                        $file = $_FILES['images']['name'][$key];
+                        $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                        
+                        if (in_array($ext, ['jpg', 'jpeg', 'png'])) {
+                            $filename = uniqid() . '.' . $ext;
                                 $path = $upload_dir . $filename;
-                                
-                                if (move_uploaded_file($tmp_name, $path)) {
-                                    $stmt = $pdo->prepare("INSERT INTO kit_images (id_kit, image_path) VALUES (?, ?)");
-                                    $stmt->execute([$id, $filename]);
-                                }
+                            
+                            if (move_uploaded_file($tmp_name, $path)) {
+                                $stmt = $pdo->prepare("INSERT INTO kit_images (id_kit, image_path) VALUES (?, ?)");
+                                $stmt->execute([$id, $filename]);
                             }
                         }
                     }
-                    
-                    header('Location: kits.php?success=edit');
-                    exit;
+                }
+                
+                header('Location: kits.php?success=edit');
+                exit;
                 } catch (Exception $e) {
                     error_log("Erreur lors de la modification du kit : " . $e->getMessage());
                     die("Une erreur est survenue lors de la modification du kit : " . $e->getMessage());
-                }
-            } elseif ($_POST['action'] === 'delete') {
+            }
+        } elseif ($_POST['action'] === 'delete') {
                 try {
-                    $id = $_POST['id'];
-                    
+            $id = $_POST['id'];
+            
                     // Récupérer les images du kit
-                    $stmt = $pdo->prepare("SELECT image_path FROM kit_images WHERE id_kit = ?");
-                    $stmt->execute([$id]);
-                    $images = $stmt->fetchAll(PDO::FETCH_COLUMN);
-                    
+            $stmt = $pdo->prepare("SELECT image_path FROM kit_images WHERE id_kit = ?");
+            $stmt->execute([$id]);
+            $images = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            
                     // Supprimer les fichiers physiques
-                    foreach ($images as $image) {
+            foreach ($images as $image) {
                         $path = "../images/kits/" . $image;
-                        if (file_exists($path)) {
-                            unlink($path);
-                        }
-                    }
-                    
+                if (file_exists($path)) {
+                    unlink($path);
+                }
+            }
+            
                     // Supprimer les enregistrements de la base de données
                     $pdo->beginTransaction();
                     
@@ -300,13 +300,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([$id]);
                     
                     // Supprimer le kit
-                    $stmt = $pdo->prepare("DELETE FROM kits WHERE id = ?");
-                    $stmt->execute([$id]);
+            $stmt = $pdo->prepare("DELETE FROM kits WHERE id = ?");
+            $stmt->execute([$id]);
                     
                     $pdo->commit();
-                    
-                    header('Location: kits.php?success=delete');
-                    exit;
+            
+            header('Location: kits.php?success=delete');
+            exit;
                 } catch (Exception $e) {
                     if ($pdo->inTransaction()) {
                         $pdo->rollBack();
@@ -361,31 +361,31 @@ $types_carrosserie = $pdo->query("SELECT DISTINCT type_carrosserie FROM kit_vehi
 ?>
 
 <?php if ($action === 'list'): ?>
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Liste des kits</h2>
-        <a href="?action=add" class="btn btn-primary">
-            <i class="bi bi-plus-lg"></i> Ajouter un kit
-        </a>
-    </div>
+    <a href="?action=add" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Ajouter un kit
+    </a>
+</div>
 
-    <?php if (isset($_GET['success'])): ?>
+<?php if (isset($_GET['success'])): ?>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <?php
-            switch ($_GET['success']) {
-                case 'add':
+        <?php
+        switch ($_GET['success']) {
+            case 'add':
                     echo "Le kit a été ajouté avec succès.";
-                    break;
-                case 'edit':
+                break;
+            case 'edit':
                     echo "Le kit a été modifié avec succès.";
-                    break;
-                case 'delete':
+                break;
+            case 'delete':
                     echo "Le kit a été supprimé avec succès.";
-                    break;
-            }
-            ?>
+                break;
+        }
+        ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    <?php endif; ?>
+    </div>
+<?php endif; ?>
 
     <div class="table-responsive">
         <table class="table table-striped">
@@ -617,24 +617,24 @@ $types_carrosserie = $pdo->query("SELECT DISTINCT type_carrosserie FROM kit_vehi
         <div class="card-body">
             <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
                 <input type="hidden" name="action" value="add">
-
+                
                 <div class="mb-3">
                     <label for="nom" class="form-label">Nom du kit</label>
                     <input type="text" class="form-control" id="nom" name="nom" required>
                 </div>
-
+                
                 <div class="mb-3">
                     <label for="description" class="form-label">Description</label>
                     <textarea class="form-control" id="description" name="description" rows="3"></textarea>
                 </div>
-
+                
                 <div class="mb-3">
                     <label class="form-label">Types de carrosserie compatibles</label>
                     <div class="row">
                         <?php foreach ($types_carrosserie as $type): ?>
                             <div class="col-md-4 mb-2">
                                 <div class="form-check">
-                                    <input type="checkbox" class="form-check-input vehicule-check"
+                                    <input type="checkbox" class="form-check-input vehicule-check" 
                                            id="type_<?php echo md5($type['type_carrosserie']); ?>"
                                            name="types[]"
                                            value="<?php echo htmlspecialchars($type['type_carrosserie']); ?>"
@@ -654,20 +654,20 @@ $types_carrosserie = $pdo->query("SELECT DISTINCT type_carrosserie FROM kit_vehi
                         <?php endforeach; ?>
                     </div>
                 </div>
-
+                
                 <div class="mb-3">
                     <label for="images" class="form-label">Images</label>
                     <input type="file" class="form-control" id="images" name="images[]" multiple accept="image/*" onchange="previewImages(this)">
                     <div id="imagePreview" class="mt-2"></div>
                 </div>
-
-                <button type="submit" class="btn btn-primary">Ajouter</button>
-                <a href="kits.php" class="btn btn-secondary">Annuler</a>
+                
+                    <button type="submit" class="btn btn-primary">Ajouter</button>
+                    <a href="kits.php" class="btn btn-secondary">Annuler</a>
             </form>
-        </div>
-    </div>
-<?php endif; ?>
-
+                    </div>
+                </div>
+                <?php endif; ?>
+                
 <style>
 .preview-image {
     display: inline-block;
@@ -736,7 +736,7 @@ $types_carrosserie = $pdo->query("SELECT DISTINCT type_carrosserie FROM kit_vehi
 
 <script>
 // Fonction pour gérer les champs de prix
-function togglePrixInput(checkbox) {
+    function togglePrixInput(checkbox) {
     const prixInput = checkbox.parentElement.nextElementSibling.querySelector('.prix-input');
     if (checkbox.checked) {
         prixInput.disabled = false;
@@ -749,8 +749,8 @@ function togglePrixInput(checkbox) {
         prixInput.required = false;
         prixInput.value = '';
     }
-}
-
+        }
+        
 // Fonction pour afficher les images en prévisualisation
 function previewImages(input) {
     const previewContainer = document.getElementById('imagePreview');
@@ -772,7 +772,7 @@ function previewImages(input) {
             }
             reader.readAsDataURL(file);
         });
-    }
+            }
 }
 
 // Initialiser les champs de prix pour les types de carrosserie déjà sélectionnés
