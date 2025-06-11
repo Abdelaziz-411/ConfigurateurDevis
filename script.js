@@ -5,6 +5,22 @@ let selectedOptions = new Set();
 let total = 0;
 let hasVehicle = null;
 let selectedTypeCarrosserie = null; // Nouvelle variable pour stocker le type de carrosserie
+let kitPrix = 0;
+const TVA = 0.20; // TVA à 20%
+let selectedMarqueId = null; // Nouvelle variable pour stocker l'ID de la marque sélectionnée
+
+// Fonction pour calculer le prix HT à partir du prix TTC
+function calculerPrixHT(prixTTC) {
+    return parseFloat(prixTTC) / (1 + TVA); // Conversion TTC vers HT
+}
+
+// Fonction pour formater le prix
+function formatPrix(prix, isTTC = true) {
+    // S'assurer que prix est un nombre
+    const prixNum = parseFloat(prix) || 0;
+    const valeur = isTTC ? prixNum : calculerPrixHT(prixNum);
+    return `${valeur.toFixed(2).replace('.', ',')} € ${isTTC ? 'TTC' : 'HT'}`;
+}
 
 // Fonction pour réinitialiser l'interface des kits
 function resetKitsUI() {
@@ -23,93 +39,223 @@ function resetOptionsUI() {
 }
 
 // Fonction pour charger les kits
-async function loadKits(typeCarrosserie) {
-    console.log('Chargement des kits pour le type de carrosserie:', typeCarrosserie);
+async function loadKits() {
+    if (!selectedModeleId || !selectedTypeCarrosserie) {
+        console.error('Modèle ou type de carrosserie non sélectionné');
+        return;
+    }
+
     try {
-        const response = await fetch(`get-kits.php?type_carrosserie=${encodeURIComponent(typeCarrosserie)}`);
+        const response = await fetch(`get-kits.php?type_carrosserie=${selectedTypeCarrosserie}`);
+        
         if (!response.ok) {
-            throw new Error('Erreur lors du chargement des kits');
+            const errorData = await response.json(); 
+            console.error('Erreur du serveur lors du chargement des kits:', errorData);
+            throw new Error('Erreur du serveur: ' + (errorData.error || response.statusText));
         }
-        const data = await response.json();
-        if (!data.success) {
-            throw new Error(data.error || 'Erreur lors du chargement des kits');
-        }
-        const kits = Array.isArray(data.kits) ? data.kits : [];
+
+        const kits = await response.json();
+        console.log('Kits reçus du serveur:', kits);
         
         const kitGallery = document.getElementById('kit-gallery');
-        if (!kitGallery) return;
-
-        if (kits.length === 0) {
-            kitGallery.innerHTML = '<div class="col-12 text-center"><p>Aucun kit disponible pour ce type de carrosserie</p></div>';
-            return;
+        kitGallery.innerHTML = '';
+        
+        kits.forEach(kit => {
+            const col = document.createElement('div');
+            col.className = 'col-md-4 col-lg-3 mb-4';
+            
+            const card = document.createElement('div');
+            card.className = 'card h-100 kit-card';
+            card.dataset.kitId = kit.id;
+            
+            const imgContainer = document.createElement('div');
+            imgContainer.className = 'card-img-container';
+            imgContainer.style.height = '200px';
+            imgContainer.style.overflow = 'hidden';
+            imgContainer.style.display = 'flex';
+            imgContainer.style.alignItems = 'center';
+            imgContainer.style.justifyContent = 'center';
+            imgContainer.style.backgroundColor = '#f8f9fa';
+            
+            const img = document.createElement('img');
+            img.className = 'card-img-top';
+            img.style.objectFit = 'cover';
+            img.style.height = '100%';
+            img.style.width = '100%';
+            
+            if (kit.images && kit.images.length > 0) {
+                img.src = kit.images[0];
+            } else {
+                img.src = 'images/kits/default-kit.png';
         }
 
-        kitGallery.innerHTML = '';
-        kits.forEach(kit => {
-            const kitCard = createKitCard(kit);
-            kitGallery.appendChild(kitCard);
+            imgContainer.appendChild(img);
+            
+            const cardBody = document.createElement('div');
+            cardBody.className = 'card-body text-center';
+            
+            const title = document.createElement('h5');
+            title.className = 'card-title';
+            title.textContent = kit.nom;
+            
+            const price = document.createElement('p');
+            price.className = 'card-text';
+            price.textContent = `Prix HT : ${formatPrix(kit.prix, false)}`;
+            
+            cardBody.appendChild(title);
+            cardBody.appendChild(price);
+            card.appendChild(imgContainer);
+            card.appendChild(cardBody);
+            col.appendChild(card);
+            kitGallery.appendChild(col);
+            
+            card.addEventListener('click', function() {
+                const kitId = this.dataset.kitId;
+                if (kitId) {
+                    selectedKit = kit;
+                    kitPrix = parseFloat(kit.prix);
+                    updateRecap();
+                }
+            });
         });
     } catch (error) {
-        console.error('Erreur:', error);
-        const kitGallery = document.getElementById('kit-gallery');
-        if (kitGallery) {
-            kitGallery.innerHTML = '<div class="col-12 text-center"><p class="text-danger">Erreur lors du chargement des kits</p></div>';
-        }
+        console.error('Erreur lors du chargement des kits:', error);
     }
 }
 
 // Fonction pour charger les options
-async function loadOptions(typeCarrosserie) {
-    try {
-        const response = await fetch(`get-options.php?type_carrosserie=${encodeURIComponent(typeCarrosserie)}`);
-        if (!response.ok) {
-            throw new Error('Erreur lors du chargement des options');
-        }
-        const data = await response.json();
-        if (!data.success) {
-            throw new Error(data.error || 'Erreur lors du chargement des options');
-        }
-        const options = Array.isArray(data.options) ? data.options : [];
-        
-        const optionsContainer = document.querySelector('.option-container');
-        if (!optionsContainer) return;
+async function loadOptions() {
+    if (!selectedModeleId || !selectedTypeCarrosserie) {
+        console.error('Modèle ou type de carrosserie non sélectionné');
+        return;
+    }
 
-        if (options.length === 0) {
-            optionsContainer.innerHTML = '<div class="col-12 text-center"><p>Aucune option disponible pour ce type de carrosserie</p></div>';
+    try {
+        const optionsContainer = document.getElementById('options-container');
+        if (!optionsContainer) {
+            console.warn('Élément #options-container non trouvé.');
             return;
         }
 
-        // Grouper les options par catégorie
-        const optionsByCategory = options.reduce((acc, option) => {
-            const category = option.categorie_nom || 'Autres';
-            if (!acc[category]) {
-                acc[category] = [];
-            }
-            acc[category].push(option);
-            return acc;
-        }, {});
-
-        // Créer l'interface pour chaque catégorie
+        // Vider le conteneur
         optionsContainer.innerHTML = '';
-        Object.entries(optionsByCategory).forEach(([category, categoryOptions]) => {
-            const categorySection = document.createElement('div');
-            categorySection.className = 'col-12 mb-4';
-            categorySection.innerHTML = `
-                <div class="category-section p-3 bg-light rounded">
-                    <h3 class="h4 mb-3">${category}</h3>
-                    <div class="row g-4">
-                        ${categoryOptions.map(option => createOptionCard(option)).join('')}
-                    </div>
-                </div>
-            `;
-            optionsContainer.appendChild(categorySection);
-        });
-    } catch (error) {
-        console.error('Erreur:', error);
-        const optionsContainer = document.querySelector('.option-container');
-        if (optionsContainer) {
-            optionsContainer.innerHTML = '<div class="col-12 text-center"><p class="text-danger">Erreur lors du chargement des options</p></div>';
+
+        // Récupérer les options depuis le serveur
+        const url = `get-options.php?type_carrosserie=${selectedTypeCarrosserie}`;
+        console.log('Fetching options from URL:', url); // Log the URL
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Erreur du serveur lors du chargement des options:', errorData);
+            throw new Error('Erreur du serveur: ' + (errorData.error || response.statusText));
         }
+
+        const options = await response.json();
+
+        // Grouper les options par catégorie
+        const optionsByCategory = {};
+        options.forEach(option => {
+            if (!optionsByCategory[option.categorie_nom]) {
+                optionsByCategory[option.categorie_nom] = [];
+            }
+            optionsByCategory[option.categorie_nom].push(option);
+        });
+
+        // Créer une section pour chaque catégorie
+        for (const [categorie, optionsList] of Object.entries(optionsByCategory)) {
+            const categorySection = document.createElement('div');
+            categorySection.className = 'category-section mb-4';
+
+            const categoryTitle = document.createElement('h3');
+            categoryTitle.className = 'h4 mb-3';
+            categoryTitle.textContent = categorie;
+            categorySection.appendChild(categoryTitle);
+
+            const rowContainer = document.createElement('div');
+            rowContainer.className = 'row';
+            categorySection.appendChild(rowContainer);
+
+            optionsList.forEach(option => {
+                const col = document.createElement('div');
+                col.className = 'col-md-4 col-lg-3 mb-4';
+                
+                const card = document.createElement('div');
+                card.className = 'card h-100 option-card';
+                card.dataset.optionId = option.id;
+                card.dataset.prix = option.prix; // Stocker le prix dans l'attribut data-prix
+                
+                const imgContainer = document.createElement('div');
+                imgContainer.className = 'card-img-container';
+                imgContainer.style.height = '200px';
+                imgContainer.style.overflow = 'hidden';
+                imgContainer.style.display = 'flex';
+                imgContainer.style.alignItems = 'center';
+                imgContainer.style.justifyContent = 'center';
+                imgContainer.style.backgroundColor = '#f8f9fa';
+                
+                const img = document.createElement('img');
+                img.className = 'card-img-top';
+                img.style.objectFit = 'cover';
+                img.style.height = '100%';
+                img.style.width = '100%';
+                
+                if (option.images && option.images.length > 0) {
+                    img.src = option.images[0];
+                } else {
+                    img.src = 'images/options/default-option.png';
+                }
+                
+                imgContainer.appendChild(img);
+                
+                const cardBody = document.createElement('div');
+                cardBody.className = 'card-body text-center';
+                
+                const title = document.createElement('h5');
+                title.className = 'card-title';
+                title.textContent = option.nom;
+                
+                const price = document.createElement('p');
+                price.className = 'card-text';
+                price.textContent = `Prix HT : ${formatPrix(option.prix, false)}`;
+                
+                cardBody.appendChild(title);
+                cardBody.appendChild(price);
+                card.appendChild(imgContainer);
+                card.appendChild(cardBody);
+                col.appendChild(card);
+                rowContainer.appendChild(col);
+                
+                card.addEventListener('click', function() {
+                    const optionId = this.dataset.optionId;
+                    console.log('Clic sur option. ID:', optionId);
+                    console.log('État actuel de selectedOptions:', Array.from(selectedOptions));
+                    console.log('Élément cliqué:', this);
+
+                    if (optionId) {
+                        if (selectedOptions.has(optionId)) {
+                            selectedOptions.delete(optionId);
+                            this.classList.remove('border-primary');
+                            console.log('Option désélectionnée. Nouvel état:', Array.from(selectedOptions));
+                        } else {
+                            selectedOptions.add(optionId);
+                            this.classList.add('border-primary');
+                            console.log('Option sélectionnée. Nouvel état:', Array.from(selectedOptions));
+                        }
+                        
+                        // Sauvegarder la configuration après chaque modification
+                        saveConfiguration();
+                        
+                        // Mettre à jour le récapitulatif
+                        updateRecap();
+                    }
+                });
+            });
+
+            optionsContainer.appendChild(categorySection);
+        }
+    } catch (error) {
+        console.error('Erreur lors du chargement des options:', error);
     }
 }
 
@@ -195,45 +341,62 @@ function createKitCard(kit) {
 
 // Fonction pour valider la sélection du véhicule
 function validerSelectionVehicule() {
-    const marque = document.getElementById('marque').value;
-    const modele = document.getElementById('modele').value;
+    // Utiliser la variable globale selectedModeleId qui est déjà mise à jour
+    const idModele = selectedModeleId;
+    const typeCarrosserie = document.getElementById('type-carrosserie').value;
     const annee = document.getElementById('annee').value;
 
-    // Construire le nom du véhicule
-    let vehiculeNom = '';
-    let typeCarrosserie = '';
-    
-    // Récupérer le nom de la marque et le type de carrosserie
-    if (marque === 'autre') {
-        vehiculeNom = document.getElementById('marque-personnalisee').value;
-        typeCarrosserie = document.getElementById('type-carrosserie').value;
-    } else {
-        const marqueCard = document.querySelector(`.marque-card[data-id="${marque}"]`);
-        if (marqueCard) {
-            vehiculeNom = marqueCard.querySelector('.card-title').textContent;
-        }
-        
-        const modeleCard = document.querySelector(`.modele-card[data-id="${modele}"]`);
-        if (modeleCard) {
-            typeCarrosserie = modeleCard.dataset.typeCarrosserie || '';
-        }
-    }
+    console.log('Validation du véhicule...');
+    console.log('ID Modèle:', idModele);
+    console.log('Type de Carrosserie:', typeCarrosserie);
+    console.log('Année:', annee);
 
-    if (!typeCarrosserie) {
-        alert('Veuillez sélectionner un type de carrosserie valide');
+    if (!idModele || !typeCarrosserie) {
+        alert('Veuillez sélectionner un modèle et un type de carrosserie');
         return;
     }
 
-    // Stocker le type de carrosserie sélectionné
-    selectedTypeCarrosserie = typeCarrosserie;
-
-    // Mettre à jour l'interface
-    document.getElementById('vehicle-selection-form').style.display = 'none';
-    document.getElementById('annee-container').style.display = 'block';
+    // Le nom du modèle et l'ID sont déjà définis dans selectedVehicule lors du clic sur la carte
+    // Cette fonction met à jour le type de carrosserie et l'année du véhicule sélectionné.
+    if (selectedVehicule) {
+        selectedVehicule.type_carrosserie = typeCarrosserie;
+        selectedVehicule.annee = annee;
+        selectedModeleId = idModele; 
+        selectedTypeCarrosserie = typeCarrosserie;
+        console.log('validerSelectionVehicule: selectedVehicule mis à jour:', selectedVehicule);
+        console.log('validerSelectionVehicule: selectedTypeCarrosserie:', selectedTypeCarrosserie);
+    } else {
+        console.error('validerSelectionVehicule: selectedVehicule est null. Cela ne devrait pas arriver ici pour un modèle existant.');
+        alert('Une erreur est survenue lors de la sélection du véhicule. Veuillez réessayer.');
+        return;
+    }
     
-    // Charger les kits et options avec le type de carrosserie
-    loadKits(typeCarrosserie);
-    loadOptions(typeCarrosserie);
+    // Masquer la sélection de véhicule
+    const existingVehicleSelection = document.getElementById('existing-vehicle-selection');
+    if (existingVehicleSelection) {
+        existingVehicleSelection.style.display = 'none';
+    } else {
+        console.error('Erreur: Élément #existing-vehicle-selection non trouvé.');
+    }
+
+    // Afficher le configurateur
+    const configurateur = document.getElementById('configurateur');
+    if (configurateur) {
+        configurateur.style.display = 'block';
+        // Rendre les sections des kits et options visibles avec l'animation
+        document.getElementById('step-kit').classList.add('is-visible');
+        document.getElementById('step-options').classList.add('is-visible');
+        document.getElementById('recap').classList.add('is-visible'); // Rendre la section récap visible
+    } else {
+        console.error('Erreur: Élément #configurateur non trouvé.');
+    }
+    
+    // Charger les kits et options compatibles
+    loadKits();
+    loadOptions();
+
+    // Mettre à jour le récapitulatif initialement
+    updateRecap();
 }
 
 // Fonction pour afficher le formulaire de sélection du véhicule
@@ -304,6 +467,7 @@ async function loadMarques() {
             card.addEventListener('click', function() {
                 const idMarque = this.dataset.marqueId;
                 if (idMarque) {
+                    selectedMarqueId = idMarque;
                     loadModeles(idMarque);
                     document.getElementById('modeles-title').style.display = 'block';
                     document.getElementById('marques-list').style.display = 'none';
@@ -413,11 +577,17 @@ async function loadModeles(idMarque) {
             title.className = 'card-title';
             title.textContent = modele.nom;
             
-            if (modele.status) {
-                const status = document.createElement('span');
-                status.className = 'badge bg-primary ms-2';
-                status.textContent = modele.status;
-                title.appendChild(status);
+            // Afficher les types de carrosserie disponibles
+            if (modele.types_carrosserie && modele.types_carrosserie.length > 0) {
+                const typesContainer = document.createElement('div');
+                typesContainer.className = 'mt-2';
+                modele.types_carrosserie.forEach(type => {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-primary me-1';
+                    badge.textContent = type;
+                    typesContainer.appendChild(badge);
+                });
+                cardBody.appendChild(typesContainer);
             }
             
             cardBody.appendChild(title);
@@ -430,17 +600,55 @@ async function loadModeles(idMarque) {
             card.addEventListener('click', function() {
                 const idModele = this.dataset.modeleId;
                 if (idModele) {
-                    document.getElementById('modele').value = idModele;
+                    selectedModeleId = idModele;
                     document.getElementById('modeles-list').style.display = 'none';
                     document.getElementById('modeles-title').style.display = 'none';
                     
-                    // Créer et afficher le champ d'année
-                    const anneeContainer = document.createElement('div');
-                    anneeContainer.className = 'col-md-4 mx-auto mt-4';
-                    anneeContainer.innerHTML = `
+                    // Find the actual model object to get its name
+                    const clickedModele = modeles.find(m => m.id == idModele);
+                    if (clickedModele) {
+                        selectedVehicule = {
+                            id: clickedModele.id,
+                            nom: clickedModele.nom, // Store the model name directly
+                            type_carrosserie: null, // Will be updated by validerSelectionVehicule
+                            annee: null // Will be updated by validerSelectionVehicule
+                        };
+                        console.log('loadModeles: selectedVehicule initialisé pour modèle existant:', selectedVehicule);
+                    } else {
+                        console.error('Erreur: Modèle cliqué non trouvé dans la liste des modèles chargée:', idModele);
+                        selectedVehicule = { id: idModele, nom: 'Modèle non spécifié', type_carrosserie: null, annee: null };
+                        console.log('loadModeles: selectedVehicule initialisé avec erreur pour modèle existant:', selectedVehicule);
+                    }
+                    
+                    // This section creates the dynamic form for type de carrosserie and year.
+                    const typeCarrosserieContainer = document.createElement('div');
+                    typeCarrosserieContainer.className = 'col-md-4 mx-auto mt-4';
+                    
+                    const selectElement = document.createElement('select');
+                    selectElement.className = 'form-select';
+                    selectElement.id = 'type-carrosserie';
+                    selectElement.required = true;
+
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = '';
+                    defaultOption.textContent = 'Sélectionnez un type';
+                    selectElement.appendChild(defaultOption);
+
+                    // Ensure clickedModele.types_carrosserie is an array before using forEach
+                    if (clickedModele && Array.isArray(clickedModele.types_carrosserie)) {
+                        clickedModele.types_carrosserie.forEach(type => {
+                            const option = document.createElement('option');
+                            option.value = type;
+                            option.textContent = type;
+                            selectElement.appendChild(option);
+                        });
+                    }
+
+                    typeCarrosserieContainer.innerHTML = `
                         <div class="card">
                             <div class="card-body">
-                                <h5 class="card-title mb-3">Année du véhicule</h5>
+                                <h5 class="card-title mb-3">Type de carrosserie</h5>
+                                <div class="mb-3" id="select-type-carrosserie-placeholder"></div>
                                 <div class="mb-3">
                                     <input type="number" class="form-control" id="annee" min="1900" max="2024" placeholder="Année du véhicule">
                                     <div class="form-text">Optionnel</div>
@@ -451,7 +659,8 @@ async function loadModeles(idMarque) {
                             </div>
                         </div>
                     `;
-                    document.getElementById('existing-vehicle-selection').appendChild(anneeContainer);
+                    typeCarrosserieContainer.querySelector('#select-type-carrosserie-placeholder').appendChild(selectElement);
+                    document.getElementById('existing-vehicle-selection').appendChild(typeCarrosserieContainer);
                 }
             });
         });
@@ -502,6 +711,16 @@ async function loadModeles(idMarque) {
             document.getElementById('modele-personnalise-group').style.display = 'block';
             document.getElementById('modeles-list').style.display = 'none';
             document.getElementById('modeles-title').style.display = 'none';
+            selectedModeleId = 'autre'; // Indicate that a custom model is being used
+            selectedVehicule = null; // Reset selectedVehicule for custom input, will be set on form submit
+            console.log('loadModeles: selectedVehicule réinitialisé pour modèle personnalisé (Autre).');
+            // Hide the existing vehicle selection form if it was visible
+            const existingVehicleSelection = document.getElementById('existing-vehicle-selection');
+            if (existingVehicleSelection) {
+                existingVehicleSelection.style.display = 'none';
+            }
+            // Show the custom vehicle form
+            document.getElementById('vehicle-selection-form').style.display = 'block';
         });
         
     } catch (error) {
@@ -541,152 +760,30 @@ function displayModeleImages(images) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Gestionnaire de soumission du formulaire de sélection du véhicule
-    const vehicleForm = document.getElementById('vehicleForm');
-    if (vehicleForm) {
-        vehicleForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            
-            // Vérifier la validité du formulaire
-            if (!this.checkValidity()) {
-                event.stopPropagation();
-                this.classList.add('was-validated');
-                return;
-            }
-
-            // Récupérer les valeurs du formulaire
-            const marque = document.getElementById('marque').value;
-            const marquePersonnalisee = document.getElementById('marque-personnalisee').value;
-            const modele = document.getElementById('modele').value;
-            const modelePersonnalise = document.getElementById('modele-personnalise').value;
-            const annee = document.getElementById('annee').value;
-
-            // Construire le nom du véhicule
-            let vehiculeNom = '';
-            if (marque === 'autre') {
-                vehiculeNom = marquePersonnalisee;
-            } else {
-                const marqueSelect = document.getElementById('marque');
-                vehiculeNom = marqueSelect.options[marqueSelect.selectedIndex].text;
-            }
-
-            if (modele === 'autre') {
-                vehiculeNom += ' ' + modelePersonnalise;
-            } else {
-                const modeleSelect = document.getElementById('modele');
-                vehiculeNom += ' ' + modeleSelect.options[modeleSelect.selectedIndex].text;
-            }
-
-            if (annee) {
-                vehiculeNom += ' (' + annee + ')';
-            }
-
-            // Créer un nouvel élément de carte de véhicule
-            const vehiculeSection = document.getElementById('step-vehicule');
-            const vehiculeContainer = vehiculeSection.querySelector('.row') || document.createElement('div');
-            if (!vehiculeContainer.classList.contains('row')) {
-                vehiculeContainer.className = 'row g-4 mt-4';
-                vehiculeSection.appendChild(vehiculeContainer);
-            }
-
-            // Supprimer toutes les anciennes cartes de véhicules personnalisés
-            vehiculeContainer.querySelectorAll('.vehicule-card[data-id^="custom_"]').forEach(card => {
-                card.closest('.col-md-4').remove();
-            });
-
-            const vehiculeId = 'custom_' + Date.now();
-            const vehiculeCard = document.createElement('div');
-            vehiculeCard.className = 'col-md-4 mb-4';
-            vehiculeCard.innerHTML = `
-                <div class="card vehicule-card" data-id="${vehiculeId}">
-                    <div class="card-body">
-                        <h5 class="card-title">${vehiculeNom}</h5>
-                        <p class="card-text">Véhicule personnalisé</p>
-                        ${modele.status ? `<p class="card-text"><small class="text-muted">Statut: ${modele.status}</small></p>` : ''}
-                    </div>
-                </div>
-            `;
-
-            // Ajouter la carte à la section des véhicules
-            vehiculeContainer.appendChild(vehiculeCard);
-
-            // Réinitialiser les sélections précédentes
-            selectedKit = null;
-            kitPrix = 0;
-            selectedOptions = new Set();
-            total = 0;
-
-            // Mettre à jour le véhicule sélectionné
-            selectedVehicule = {
-                id: vehiculeId,
-                nom: vehiculeNom,
-                status: modele.status
-            };
-
-            // Mettre à jour l'interface
-            document.querySelectorAll('.vehicule-card').forEach(c => c.classList.remove('border-primary'));
-            vehiculeCard.querySelector('.vehicule-card').classList.add('border-primary');
-
-            // Réinitialiser l'interface des kits et options
-            resetKitsUI();
-            resetOptionsUI();
-
-            // Afficher les sections
-            document.getElementById('step-kit').classList.add('is-visible');
-            document.getElementById('step-options').classList.add('is-visible');
-
-            // Charger les kits et options pour ce véhicule
-            loadKits(selectedTypeCarrosserie);
-            loadOptions(selectedTypeCarrosserie);
-
-            // Mettre à jour le récapitulatif
-            updateRecap();
-
-            // Sauvegarder la configuration
-            saveConfiguration();
-
-            // Cacher le formulaire
-            document.getElementById('vehicle-selection-form').style.display = 'none';
-
-            // Faire défiler jusqu'à la section des kits
-            document.getElementById('step-kit').scrollIntoView({ behavior: 'smooth' });
-        });
-    }
-
-    const vehiculeSelect = document.getElementById('vehicule');
-    const kitSelect = document.getElementById('kit');
-    const optionsContainer = document.querySelector('.option-container');
-    const totalSpan = document.getElementById('total-price');
-    const galleryDiv = document.getElementById('kit-gallery');
-    const recapDiv = document.getElementById('recap');
-    const vehiculeCards = document.querySelectorAll('.vehicule-card');
-    const prixTTCSwitch = document.getElementById('prixTTC');
-
-    let kitPrix = 0;
-    const TVA = 0.20; // TVA à 20%
-
-    // Rendre les variables et fonctions accessibles globalement
-    window.kitPrix = kitPrix;
-    window.selectedVehicule = selectedVehicule;
-    window.selectedKit = selectedKit;
-    window.selectedOptions = selectedOptions;
-    window.total = total;
-    window.TVA = TVA;
-    window.selectKit = selectKit; // Rendre selectKit accessible globalement
-
-
     // Fonctions de sauvegarde de la configuration
     function saveConfiguration() {
+    console.log('Sauvegarde de la configuration...');
+    console.log('État actuel:', {
+        vehicule: selectedVehicule,
+        kit: selectedKit,
+        options: Array.from(selectedOptions),
+        hasVehicle: hasVehicle
+    });
+
         const config = {
             vehicule: selectedVehicule,
             kit: selectedKit,
             options: Array.from(selectedOptions),
             hasVehicle: hasVehicle
         };
+
+    try {
         localStorage.setItem('configurateur-state', JSON.stringify(config));
+        console.log('Configuration sauvegardée avec succès');
+    } catch (error) {
+        console.error('Erreur lors de la sauvegarde de la configuration:', error);
     }
-    window.saveConfiguration = saveConfiguration;
+}
 
     // Fonction pour sélectionner un kit
     function selectKit(kitId, prix) {
@@ -727,450 +824,496 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Fonction de restauration de la configuration
-    async function loadConfiguration() {
+// Fonction pour charger la configuration sauvegardée
+function loadConfiguration() {
         const savedConfig = localStorage.getItem('configurateur-state');
         if (savedConfig) {
             try {
                 const config = JSON.parse(savedConfig);
-                
-                // Restaurer l'information sur la possession du véhicule
-                if (config.hasVehicle !== undefined) {
-                    hasVehicle = config.hasVehicle;
-                }
-                
-                // Restaurer la sélection du véhicule
                 if (config.vehicule) {
-                    const vehiculeCard = document.querySelector(`.vehicule-card[data-id="${config.vehicule}"]`);
-                    if (vehiculeCard) {
                         selectedVehicule = config.vehicule;
-                        vehiculeCards.forEach(c => c.classList.remove('border-primary'));
-                        vehiculeCard.classList.add('border-primary');
-                        
-                        // Réinitialiser les sélections précédentes
-                        selectedKit = null;
-                        kitPrix = 0;
-                        selectedOptions = new Set();
-                        
-                        // Afficher les sections
-                        document.getElementById('step-kit').classList.add('is-visible');
-                        document.getElementById('step-options').classList.add('is-visible');
-                        
-                        // Charger les kits et options pour ce véhicule
-                        await loadKits(selectedTypeCarrosserie);
-                        await loadOptions(selectedTypeCarrosserie);
-                        
-                        // Une fois que les kits et options sont chargés, on peut restaurer les sélections
+                selectedModeleId = config.vehicule.id;
+                selectedTypeCarrosserie = config.vehicule.type_carrosserie;
+            }
                         if (config.kit) {
-                            const kitCard = document.querySelector(`.kit-card[data-id="${config.kit.id}"]`);
-                            if (kitCard) {
-                                // Utiliser directement la fonction selectKit si elle est chargée
-                                if (typeof selectKit === 'function') {
-                                     selectKit(config.kit.id, config.kit.prix);
-                                } else {
-                                    console.error('La fonction selectKit n\'est pas encore disponible.');
-                                }
-                            }
-                        }
-                        
-                        if (config.options && Array.isArray(config.options)) {
-                            config.options.forEach(savedOption => {
-                                const optionCard = document.querySelector(`.option-card[data-id="${savedOption.id}"]`);
-                                if (optionCard) {
-                                    const checkbox = optionCard.querySelector('.option-checkbox');
-                                    if (checkbox) {
-                                        checkbox.checked = true;
-                                        // Déclencher l'événement change manuellement
-                                        const event = new Event('change');
-                                        checkbox.dispatchEvent(event);
-                                    }
-                                }
-                            });
-                        }
-                        
-                        // Mettre à jour l'affichage
+                selectedKit = config.kit;
+                kitPrix = parseFloat(config.kit.prix) || 0;
+            }
+            if (config.options) {
+                selectedOptions = new Set(config.options);
+            }
+            if (config.hasVehicle !== undefined) {
+                hasVehicle = config.hasVehicle;
+            }
+            
+            // Mettre à jour l'interface
                         updateRecap();
-                        updateTotal();
-                    } else {
-                        // Si le véhicule sauvegardé n'existe plus, on efface la sauvegarde
-                        localStorage.removeItem('configurateur-state');
-                    }
-                }
             } catch (error) {
                 console.error('Erreur lors du chargement de la configuration:', error);
-                // En cas d'erreur, on efface la sauvegarde corrompue
                 localStorage.removeItem('configurateur-state');
             }
         }
     }
 
-    // Charger la configuration sauvegardée au chargement de la page
-    loadConfiguration();
+// Fonction pour mettre à jour le total
+function updateTotal() {
+    let totalTTC = 0;
 
-    // Fonction pour calculer le prix TTC
-    function calculerPrixTTC(prixHT) {
-        return prixHT * (1 + TVA);
+    // Ajouter le prix du kit sélectionné
+    if (selectedKit) {
+        totalTTC += parseFloat(selectedKit.prix) || 0;
     }
 
-    // Fonction pour formater le prix
-    function formatPrix(prix, isTTC = true) {
-        const valeur = isTTC ? calculerPrixTTC(prix) : prix;
-        return `${valeur.toFixed(2).replace('.', ',')} € ${isTTC ? 'TTC' : 'HT'}`;
-    }
-
-
-    // Écouter le changement de switch HT/TTC
-    prixTTCSwitch.addEventListener('change', function() {
-        updateRecap();
+    // Ajouter les prix des options sélectionnées
+    selectedOptions.forEach(optionId => {
+        const optionCard = document.querySelector(`.option-card[data-option-id="${optionId}"]`);
+        if (optionCard) {
+            const prix = parseFloat(optionCard.dataset.prix) || 0;
+            totalTTC += prix;
+        }
     });
+
+    // Calculer le total HT
+    const totalHT = calculerPrixHT(totalTTC);
+
+    // Mettre à jour l'affichage des totaux
+    const recapTotalHT = document.getElementById('recap-total-ht');
+    const recapTotalTTC = document.getElementById('recap-total-ttc');
+
+    if (recapTotalHT) {
+        recapTotalHT.textContent = `${formatPrix(totalHT, false)}`;
+    }
+    if (recapTotalTTC) {
+        recapTotalTTC.textContent = `${formatPrix(totalTTC, true)}`;
+    }
+}
 
     // Fonction pour mettre à jour le récapitulatif
     function updateRecap() {
         const recapDetails = document.getElementById('recap-details');
-        if (!recapDetails) return;
+    if (!recapDetails) {
+        console.warn('Élément #recap-details non trouvé.');
+        return;
+    }
 
-        const isTTC = prixTTCSwitch && prixTTCSwitch.checked;
+    console.log('updateRecap: selectedVehicule:', selectedVehicule);
+    console.log('Mise à jour du récapitulatif...');
+    console.log('Options sélectionnées:', Array.from(selectedOptions));
+
         let html = '';
-        total = 0;
 
-        try {
-            // Réinitialiser le récapitulatif
-            html = '';
-
-            // Ajouter l'information sur la possession du véhicule
-            if (hasVehicle !== null) {
+    // Ajouter les informations du véhicule sélectionné
                 html += `
                     <div class="recap-section">
-                        <h4>Possession du véhicule</h4>
-                        <p>${hasVehicle ? 'Oui' : 'Non'}</p>
-                    </div>
+            <h4>Véhicule sélectionné</h4>
+            <div id="recap-vehicule">
                 `;
-            }
-
-        // Ajouter le véhicule
         if (selectedVehicule) {
-            const vehiculeCard = document.querySelector(`.vehicule-card[data-id="${selectedVehicule}"]`);
-                if (vehiculeCard) {
-                    const vehiculeNom = vehiculeCard.querySelector('.card-title')?.textContent || 'Véhicule sélectionné';
+            html += `
+                <ul>
+                    <li>Modèle: ${selectedVehicule.nom || 'Non spécifié'}</li>
+                    <li>Type de carrosserie: ${selectedVehicule.type_carrosserie || 'Non spécifié'}</li>
+                    ${selectedVehicule.annee ? `<li>Année: ${selectedVehicule.annee}</li>` : ''}
+                </ul>
+        `;
+    } else {
+        html += `
+                <em>Aucun véhicule sélectionné</em>
+        `;
+    }
+    html += `
+            </div>
+        </div>
+    `;
+
+    // Ajouter le kit sélectionné
             html += `
                 <div class="recap-section">
-                    <h4>Véhicule</h4>
-                            <p>${vehiculeNom}${selectedVehicule.status ? ` (${selectedVehicule.status})` : ''}</p>
-                </div>
-            `;
-                }
-        }
+            <h4>Kit sélectionné</h4>
+            <div id="recap-kit">
+    `;
+    if (selectedKit) {
+        html += `
+                <ul>
+                    <li>${selectedKit.nom}</li>
+                    <li>Prix: ${formatPrix(selectedKit.prix, document.getElementById('prixTTC')?.checked)}</li>
+                </ul>
+        `;
+    } else {
+        html += `
+                <em>Aucun kit sélectionné</em>
+        `;
+    }
+    html += `
+            </div>
+        </div>
+    `;
 
-            // Ajouter le kit seulement s'il est sélectionné et valide
-            if (selectedKit && selectedKit.id && selectedKit.prix !== undefined && selectedKit.prix !== null) {
-            const prixHT = parseFloat(selectedKit.prix);
-                if (!isNaN(prixHT)) {
-            total += prixHT;
-            const kitCard = document.querySelector(`.kit-card[data-id="${selectedKit.id}"]`);
-                    const kitNom = kitCard ? kitCard.querySelector('.card-title')?.textContent : 'Kit sélectionné';
-            html += `
-                <div class="recap-section">
-                    <h4>Kit d'aménagement</h4>
-                    <p>${kitNom} - ${formatPrix(prixHT, isTTC)}</p>
-                </div>
-            `;
-        }
-            }
-
-            // Ajouter les options seulement si elles sont valides
-            const validOptions = Array.from(selectedOptions).filter(option => 
-                option && 
-                option.id && 
-                option.prix !== undefined && option.prix !== null &&
-                !isNaN(parseFloat(option.prix))
-            );
-
-
-            if (validOptions.length > 0) {
+    // Ajouter les options sélectionnées
             html += `
                 <div class="recap-section">
                     <h4>Options sélectionnées</h4>
-                    <ul class="list-unstyled">
-            `;
+            <div id="recap-options">
+    `;
+    if (selectedOptions.size > 0) {
+        let listItems = '';
+        selectedOptions.forEach(optionId => {
+            const optionCard = document.querySelector(`.option-card[data-option-id="${optionId}"]`);
+            console.log('Recherche de l\'option:', optionId);
+            console.log('Carte trouvée:', optionCard);
             
-                validOptions.forEach(option => {
-                const prixHT = parseFloat(option.prix);
-                total += prixHT;
+            if (optionCard) {
+                const nom = optionCard.querySelector('.card-title')?.textContent || 'Option inconnue';
+                const prix = optionCard.dataset.prix;
+                console.log('Détails de l\'option:', { id: optionId, nom, prix });
+                listItems += `<li>${nom} - ${formatPrix(prix, document.getElementById('prixTTC')?.checked)}</li>`;
+            } else {
+                console.warn('Carte non trouvée pour l\'option:', optionId);
+            }
+        });
+        html += `<ul class="list-unstyled">${listItems}</ul>`;
+        console.log('HTML final des options:', html);
+    } else {
                 html += `
-                        <li>${option.nom || 'Option'} - ${formatPrix(prixHT, isTTC)}</li>
+                <em>Aucune option sélectionnée</em>
                 `;
-            });
-            
+    }
             html += `
-                    </ul>
+            </div>
                 </div>
             `;
-        }
 
-            // Ajouter le total seulement s'il est valide
-            if (!isNaN(total) && total >= 0) {
-        const totalTTC = isTTC ? calculerPrixTTC(total) : total;
+    // Section des totaux (toujours présente)
         html += `
             <div class="recap-section border-top pt-3 mt-3">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0">Total ${isTTC ? 'TTC' : 'HT'}</h4>
-                                    <p class="h3 mb-0">${totalTTC.toFixed(2).replace('.', ',')} €</p>
+                <h4 class="mb-0">Total HT</h4>
+                <p class="h3 mb-0" id="recap-total-ht">0,00 € HT</p>
                 </div>
-                ${isTTC ? `
                 <div class="d-flex justify-content-between align-items-center mt-2">
-                    <small class="text-muted">Total HT</small>
-                                    <small class="text-muted">${total.toFixed(2).replace('.', ',')} €</small>
+                <h4 class="mb-0">Total TTC</h4>
+                <p class="h3 mb-0" id="recap-total-ttc">0,00 € TTC</p>
                 </div>
-                <div class="d-flex justify-content-between align-items-center">
-                    <small class="text-muted">TVA (20%)</small>
-                                    <small class="text-muted">${(totalTTC - total).toFixed(2).replace('.', ',')} €</small>
-                </div>
-                ` : ''}
             </div>
         `;
-            }
 
         recapDetails.innerHTML = html;
-            const recapElement = document.getElementById('recap');
-            if (recapElement) {
-                if (selectedVehicule) {
-                    recapElement.classList.add('is-visible');
-                } else {
-                    recapElement.classList.remove('is-visible');
-                }
-            }
-        } catch (error) {
-            console.error('Erreur dans updateRecap:', error);
-            recapDetails.innerHTML = `
-                <div class="alert alert-danger">
-                    Une erreur est survenue lors de la mise à jour du récapitulatif. 
-                    Veuillez rafraîchir la page.
-                </div>
-            `;
-        }
-    }
+    console.log('Récapitulatif mis à jour avec succès');
+
+    // Mettre à jour le total (les valeurs réelles) après que les éléments aient été créés dans le DOM
+    updateTotal();
+}
+
+// Rendre les variables et fonctions accessibles globalement
+window.selectedVehicule = selectedVehicule;
+window.selectedKit = selectedKit;
+window.selectedOptions = selectedOptions;
+window.total = total;
+window.hasVehicle = hasVehicle;
+window.selectedTypeCarrosserie = selectedTypeCarrosserie;
+window.kitPrix = kitPrix;
+window.TVA = TVA;
+window.selectedMarqueId = selectedMarqueId;
+
+window.calculerPrixHT = calculerPrixHT;
+window.formatPrix = formatPrix;
+window.resetKitsUI = resetKitsUI;
+window.resetOptionsUI = resetOptionsUI;
+window.loadKits = loadKits;
+window.loadOptions = loadOptions;
+window.createOptionCard = createOptionCard;
+window.createKitCard = createKitCard;
+window.validerSelectionVehicule = validerSelectionVehicule;
+window.showVehicleSelection = showVehicleSelection;
+window.loadMarques = loadMarques;
+window.loadModeles = loadModeles;
+window.displayModeleImages = displayModeleImages;
+window.saveConfiguration = saveConfiguration;
+window.selectKit = selectKit;
+window.updateTotal = updateTotal;
     window.updateRecap = updateRecap;
+window.loadConfiguration = loadConfiguration;
 
-    // Fonction pour mettre à jour le total
-    function updateTotal() {
-        // Au lieu de mettre à jour un élément total-price qui n'existe pas,
-        // on met simplement à jour le récapitulatif qui contient déjà le total
-        updateRecap();
+document.addEventListener('DOMContentLoaded', function() {
+    // Rendre la première étape de sélection de véhicule visible au chargement de la page
+    const stepVehicule = document.getElementById('step-vehicule');
+    if (stepVehicule) {
+        stepVehicule.classList.add('is-visible');
     }
 
-    // Gestion des cartes de véhicules
-    vehiculeCards.forEach(card => {
-        card.addEventListener('click', async () => {
-            const vehiculeId = card.dataset.id;
+    // Gestionnaire de soumission du formulaire de sélection du véhicule
+    const vehicleForm = document.getElementById('vehicleForm');
+    if (vehicleForm) {
+        vehicleForm.addEventListener('submit', function(event) {
+            event.preventDefault();
             
-            // Si on change de véhicule, on réinitialise tout
-            if (selectedVehicule !== vehiculeId) {
-                // Supprimer la configuration précédente du localStorage
-                localStorage.removeItem('configurateur-state');
-                
-                // Réinitialiser complètement l'état
-                selectedKit = null;
-                kitPrix = 0;
-                selectedOptions = new Set();
+            // Vérifier la validité du formulaire
+            if (!this.checkValidity()) {
+                event.stopPropagation();
+                this.classList.add('was-validated');
+                return;
+            }
+
+            // Récupérer les valeurs du formulaire
+            const marqueInput = document.getElementById('marque');
+            const marquePersonnalisee = document.getElementById('marque-personnalisee').value.trim();
+            const modeleInput = document.getElementById('modele');
+            const modelePersonnalise = document.getElementById('modele-personnalise').value.trim();
+            const annee = document.getElementById('annee').value;
+            const typeCarrosseriePersonalise = document.getElementById('type-carrosserie-personnalise').value;
+
+            // Construire le nom du véhicule
+            let vehiculeNom = '';
+            let selectedTypeCarrosserieForCustom = typeCarrosseriePersonalise; // Utiliser la valeur du nouveau champ
+
+            if (selectedMarqueId === 'autre' && marquePersonnalisee) {
+                vehiculeNom += marquePersonnalisee;
+            } else if (marqueInput && marqueInput.value && marqueInput.selectedIndex !== -1) {
+                vehiculeNom += marqueInput.options[marqueInput.selectedIndex].text;
+            }
+
+            if (selectedModeleId === 'autre' && modelePersonnalise) {
+                vehiculeNom += ' ' + modelePersonnalise;
+            } else if (modeleInput && modeleInput.value && modeleInput.selectedIndex !== -1) {
+                vehiculeNom += ' ' + modeleInput.options[modeleInput.selectedIndex].text;
+            }
+
+            if (annee) {
+                vehiculeNom += ' (' + annee + ')';
+            }
                 
                 // Mettre à jour le véhicule sélectionné
             selectedVehicule = {
                 id: vehiculeId,
-                nom: vehiculeNom,
-                status: modele.status
+                nom: vehiculeNom.trim() || 'Véhicule personnalisé',
+                type_carrosserie: selectedTypeCarrosserieForCustom, // Utiliser la valeur du champ personnalisé
+                annee: annee || null
             };
+            selectedModeleId = vehiculeId; // Utiliser l'ID personnalisé pour la suite du flux
+            selectedTypeCarrosserie = selectedTypeCarrosserieForCustom; // Mettre à jour la variable globale
+
+            console.log('vehicleForm submit: selectedVehicule après soumission personnalisé:', selectedVehicule);
+            console.log('vehicleForm submit: selectedTypeCarrosserie global:', selectedTypeCarrosserie); // Ajout d'un log
             
-            // Mettre à jour l'interface
-            vehiculeCards.forEach(c => c.classList.remove('border-primary'));
-            card.classList.add('border-primary');
-            
-                // Réinitialiser l'interface des kits et options
-                resetKitsUI();
-                resetOptionsUI();
-                
-                // Forcer la réinitialisation du récapitulatif
-                const recapDetails = document.getElementById('recap-details');
-                if (recapDetails) {
-                    recapDetails.innerHTML = `
-                        <div class="recap-section">
-                            <h4>Véhicule</h4>
-                            <p>${card.querySelector('.card-title')?.textContent || 'Véhicule sélectionné'}</p>
-                        </div>
-                    `;
-                }
-                
-                // Réinitialiser le total
-                total = 0;
-                updateTotal();
-                
-                try {
-                    // Charger les nouveaux kits et options
-                    await loadKits(selectedTypeCarrosserie);
-                    await loadOptions(selectedTypeCarrosserie);
-            
-            // Afficher les sections
-            document.getElementById('step-kit').classList.add('is-visible');
-            document.getElementById('step-options').classList.add('is-visible');
-            document.getElementById('step-kit').scrollIntoView({ behavior: 'smooth' });
-            
-                    // Sauvegarder la nouvelle configuration
-                    saveConfiguration();
-                } catch (error) {
-                    console.error('Erreur lors du chargement des données:', error);
-                    alert('Une erreur est survenue lors du chargement des données. Veuillez réessayer.');
-                }
-            }
-        });
-    });
-
-    // Fonction pour réinitialiser l'interface des kits
-    function resetKitsUI() {
-        const kitGallery = document.getElementById('kit-gallery');
-        if (kitGallery) {
-            kitGallery.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
-        }
-    }
-
-    // Fonction pour réinitialiser l'interface des options
-    function resetOptionsUI() {
-        const optionsContainer = document.querySelector('.option-container');
-        if (optionsContainer) {
-            optionsContainer.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
-        }
-    }
-
-    // Gestion du formulaire de devis
-    const btnDemandeDevis = document.getElementById('btnDemandeDevis');
-    const devisModal = new bootstrap.Modal(document.getElementById('devisModal'), {
-        keyboard: true,
-        backdrop: 'static'
-    });
-    const btnEnvoyerDevis = document.getElementById('btnEnvoyerDevis');
-
-    // Ajouter un écouteur pour la fermeture du modal
-    devisModal._element.addEventListener('hidden.bs.modal', function (e) {
-        // Réinitialiser le formulaire
-        document.getElementById('formDevis').reset();
-    });
-    const formDevis = document.getElementById('formDevis');
-
-    btnDemandeDevis.addEventListener('click', () => {
-        if (!selectedVehicule) {
-            alert('Veuillez sélectionner un véhicule');
-            return;
-        }
-        devisModal.show();
-    });
-
-    // Met le focus sur le champ "Nom" à l'ouverture du modal (si le champ existe)
-    document.getElementById('devisModal').addEventListener('shown.bs.modal', function () {
-        const nomInput = document.getElementById('nom');
-        if (nomInput) nomInput.focus();
-    });
-
-
-    btnEnvoyerDevis.addEventListener('click', async () => {
-        if (!formDevis.checkValidity()) {
-            formDevis.reportValidity();
-            return;
-        }
-
-        const formData = {
-            nom: document.getElementById('nom')?.value || '',
-            prenom: document.getElementById('prenom')?.value || '',
-            email: document.getElementById('email')?.value || '',
-            telephone: document.getElementById('telephone')?.value || '',
-            message: document.getElementById('message')?.value || '',
-            vehicule_id: selectedVehicule,
-            kit_id: selectedKit ? selectedKit.id : null,
-            configuration: document.getElementById('recap-details')?.innerText || '',
-            prix_ht: total,
-            prix_ttc: calculerPrixTTC(total)
-        };
-
-        try {
-            btnEnvoyerDevis.disabled = true;
-            btnEnvoyerDevis.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Envoi en cours...';
-
-            const response = await fetch('save-devis.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                // Toujours recréer l'instance du modal pour garantir la fermeture
-                const modalElement = document.getElementById('devisModal');
-                const modalInstance = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
-                modalInstance.hide();
-                formDevis.reset();
-                alert('Votre demande de devis a été envoyée avec succès. Nous vous contacterons prochainement.');
-            } else {
-                throw new Error(data.message);
-            }
-        } catch (error) {
-            alert('Erreur lors de l\'envoi du devis : ' + error.message);
-        } finally {
-            btnEnvoyerDevis.disabled = false;
-            btnEnvoyerDevis.textContent = 'Envoyer';
-        }
-    });
-
-    // Gestion du bouton de réinitialisation
-    const btnResetConfig = document.getElementById('btnResetConfig');
-    if (btnResetConfig) {
-        btnResetConfig.addEventListener('click', () => {
-            // Réinitialiser les variables d'état
-            selectedVehicule = null;
+            // Réinitialiser les sélections précédentes (kits et options)
             selectedKit = null;
             kitPrix = 0;
             selectedOptions = new Set();
             total = 0;
+            
+            // Mettre à jour l'interface
+            document.querySelectorAll('.vehicule-card').forEach(c => c.classList.remove('border-primary'));
+            const vehiculeCard = document.createElement('div');
+            vehiculeCard.className = 'col-md-4 mb-4';
+            vehiculeCard.innerHTML = `
+                <div class="card vehicule-card" data-id="${vehiculeId}">
+                    <div class="card-body">
+                        <h5 class="card-title">${vehiculeNom}</h5>
+                        <p class="card-text">Véhicule personnalisé</p>
+                        ${modeleInput.status ? `<p class="card-text"><small class="text-muted">Statut: ${modeleInput.status}</small></p>` : ''}
+                    </div>
+                </div>
+            `;
+            const vehiculeContainer = document.getElementById('step-vehicule').querySelector('.row') || document.createElement('div');
+            vehiculeContainer.appendChild(vehiculeCard);
+            
+                // Réinitialiser l'interface des kits et options
+                resetKitsUI();
+                resetOptionsUI();
+            
+            // Afficher les sections
+            document.getElementById('step-kit').classList.add('is-visible');
+            document.getElementById('step-options').classList.add('is-visible');
 
-            // Réinitialiser l'interface
-            vehiculeCards.forEach(card => card.classList.remove('border-primary'));
-            const kitGallery = document.getElementById('kit-gallery');
-            if (kitGallery) kitGallery.innerHTML = ''; // Vider la galerie de kits
-            const optionsContainer = document.querySelector('.option-container');
-            if (optionsContainer) optionsContainer.innerHTML = ''; // Vider le conteneur d'options
+            // Charger les kits et options pour ce véhicule
+            loadKits();
+            loadOptions();
 
-            // Cacher les sections Kit et Options
-            document.getElementById('step-kit').classList.remove('is-visible');
-            document.getElementById('step-options').classList.remove('is-visible');
-            // document.getElementById('recap').style.display = 'none'; // Cacher le récapitulatif
+            // Mettre à jour le récapitulatif
+            updateRecap();
 
-            // Réinitialiser et cacher le récapitulatif
-            const recapDetails = document.getElementById('recap-details');
-            if (recapDetails) recapDetails.innerHTML = '';
+            // Sauvegarder la configuration
+                    saveConfiguration();
 
-            // Supprimer l'état sauvegardé dans le localStorage
-            localStorage.removeItem('configurateur-state');
+            // Cacher le formulaire
+            document.getElementById('vehicle-selection-form').style.display = 'none';
 
-            // Remonter en haut de la page ou vers la section véhicule
-            document.getElementById('step-vehicule').scrollIntoView({ behavior: 'smooth' });
-
-            console.log('Configuration réinitialisée.');
+            // Faire défiler jusqu'à la section des kits
+            document.getElementById('step-kit').scrollIntoView({ behavior: 'smooth' });
         });
     }
 
-    // Rendre la section véhicule visible au chargement de la page
-    const vehiculeSection = document.getElementById('step-vehicule');
-    if (vehiculeSection) {
-        vehiculeSection.classList.add('is-visible');
-    }
+    const vehiculeSelect = document.getElementById('vehicule');
+    const kitSelect = document.getElementById('kit');
+        const optionsContainer = document.querySelector('.option-container');
+    const totalSpan = document.getElementById('total-price');
+    const galleryDiv = document.getElementById('kit-gallery');
+    const recapDiv = document.getElementById('recap');
+    const vehiculeCards = document.querySelectorAll('.vehicule-card');
+    const prixTTCSwitch = document.getElementById('prixTTC');
 
-    function resetVehicleSelection() {
-        document.getElementById('existing-vehicle-selection').style.display = 'none';
-        document.getElementById('vehicle-selection-form').style.display = 'none';
-        document.getElementById('marques-list').style.display = 'block';
-        document.getElementById('modeles-list').style.display = 'none';
-        document.getElementById('modeles-title').style.display = 'none';
-        document.getElementById('marque-personnalisee-group').style.display = 'none';
-        document.getElementById('modele-personnalise-group').style.display = 'none';
-        loadMarques();
+    // Charger la configuration sauvegardée au chargement de la page
+    loadConfiguration();
+
+    // Écouter le changement de switch HT/TTC
+    prixTTCSwitch.addEventListener('change', function() {
+            updateRecap();
+    });
+
+    // Gestionnaire d'événements pour le bouton "Demander un devis"
+    document.getElementById('btnDemandeDevis').addEventListener('click', function() {
+        const devisModal = new bootstrap.Modal(document.getElementById('devisModal'));
+        devisModal.show();
+    });
+
+    // Gestionnaire d'événements pour le bouton "Réinitialiser"
+    document.getElementById('btnResetConfig').addEventListener('click', function() {
+        if (confirm('Êtes-vous sûr de vouloir réinitialiser la configuration ? Toutes les sélections seront effacées.')) {
+            // Réinitialiser les variables globales
+            selectedVehicule = null;
+            selectedKit = null;
+            selectedOptions = new Set();
+            total = 0;
+            hasVehicle = null;
+            selectedTypeCarrosserie = null;
+            selectedMarqueId = null;
+
+            // Effacer le localStorage
+            localStorage.removeItem('configurateur-state');
+
+            // Réinitialiser l'interface utilisateur
+            const initialVehicleSelection = document.getElementById('initial-vehicle-selection');
+            const existingVehicleSelection = document.getElementById('existing-vehicle-selection');
+            const vehicleForm = document.getElementById('vehicle-selection-form');
+            const configurateurDiv = document.getElementById('configurateur');
+
+            if (initialVehicleSelection) initialVehicleSelection.style.display = 'block';
+            if (existingVehicleSelection) existingVehicleSelection.style.display = 'none';
+            if (vehicleForm) vehicleForm.style.display = 'none';
+            if (configurateurDiv) configurateurDiv.style.display = 'none';
+
+            // Masquer les étapes de kits et options
+            const stepKit = document.getElementById('step-kit');
+            const stepOptions = document.getElementById('step-options');
+            const recap = document.getElementById('recap');
+
+            if (stepKit) stepKit.classList.remove('is-visible');
+            if (stepOptions) stepOptions.classList.remove('is-visible');
+            if (recap) recap.classList.remove('is-visible');
+
+            // Réinitialiser le contenu du récapitulatif (appeler updateRecap pour re-générer l'état initial)
+            updateRecap();
+        }
+    });
+            
+    // Soumission du formulaire de devis
+    const formDevis = document.getElementById('formDevis');
+    if (formDevis) {
+        formDevis.addEventListener('submit', async function(e) {
+            console.log('Début de la soumission du formulaire');
+            e.preventDefault();
+            
+            if (!this.checkValidity()) {
+                console.log('Formulaire invalide');
+                e.stopPropagation();
+                this.classList.add('was-validated');
+                return;
+            }
+            
+            console.log('Formulaire valide, vérification des sélections');
+            console.log('formDevis submit: selectedVehicule:', selectedVehicule);
+            console.log('formDevis submit: selectedKit:', selectedKit);
+
+            if (!selectedVehicule || !selectedKit) {
+                console.log('Véhicule ou kit manquant');
+                alert("Veuillez sélectionner un véhicule et un kit avant de soumettre le devis.");
+                return;
+            }
+
+            console.log('Sélections validées, préparation des données');
+            // Récupérer les données du formulaire et les convertir en objet JSON
+            const formData = new FormData(formDevis);
+            const data = {};
+            for (let [key, value] of formData.entries()) {
+                data[key] = value;
+            }
+            
+            console.log('Données du formulaire récupérées:', data);
+            
+            // Calculer totalHT et totalTTC juste avant la soumission pour s'assurer des valeurs à jour
+            let currentTotalHT = 0;
+            if (selectedKit) {
+                currentTotalHT += parseFloat(selectedKit.prix) || 0;
+            }
+            selectedOptions.forEach(optionId => {
+                const optionCard = document.querySelector(`.option-card[data-option-id="${optionId}"]`);
+                if (optionCard) {
+                    const prix = parseFloat(optionCard.dataset.prix) || 0;
+                    currentTotalHT += prix;
+                }
+            });
+            const currentTotalTTC = calculerPrixHT(currentTotalHT);
+            
+            console.log('Totaux calculés:', { currentTotalHT, currentTotalTTC });
+            
+            // Construire la configuration détaillée pour la BDD
+            let configurationDetails = `Véhicule: ${selectedVehicule.nom} (Type: ${selectedVehicule.type_carrosserie}, Année: ${selectedVehicule.annee || 'Non spécifiée'})\n`;
+            configurationDetails += `Kit: ${selectedKit.nom} (Prix HT: ${formatPrix(selectedKit.prix, false)})\n`;
+
+            if (selectedOptions.size > 0) {
+                configurationDetails += 'Options:\n';
+                selectedOptions.forEach(optionId => {
+                    const optionCard = document.querySelector(`.option-card[data-option-id="${optionId}"]`);
+                    if (optionCard) {
+                        const nom = optionCard.querySelector('.card-title')?.textContent || 'Option inconnue';
+                        const prix = optionCard.dataset.prix || '0';
+                        configurationDetails += `- ${nom} (Prix HT: ${formatPrix(prix, false)})\n`;
+                    }
+                });
+            }
+            
+            console.log('Configuration détaillée construite:', configurationDetails);
+            
+            // Ajouter les détails de la configuration
+            data.vehicule_id = selectedVehicule.id;
+            data.type_carrosserie = selectedVehicule.type_carrosserie;
+            data.kit_id = selectedKit ? selectedKit.id : null;
+            data.prix_ht = currentTotalHT;
+            data.prix_ttc = currentTotalTTC;
+            data.configuration = configurationDetails;
+
+            console.log('Données finales prêtes à être envoyées:', data);
+
+            try {
+                console.log('Tentative d\'envoi des données au serveur...');
+                const response = await fetch('save-devis.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                console.log('Réponse brute du serveur:', response);
+                const result = await response.json();
+                console.log('Données de la réponse:', result);
+                
+                if (result.success) {
+                    console.log('Succès de l\'envoi');
+                    alert("Votre demande de devis a été envoyée avec succès !");
+                    const devisModal = bootstrap.Modal.getInstance(document.getElementById('devisModal'));
+                    if (devisModal) devisModal.hide();
+                    formDevis.reset();
+                    formDevis.classList.remove('was-validated');
+                    document.getElementById('btnResetConfig').click();
+                } else {
+                    console.error('Erreur du serveur:', result);
+                    alert("Erreur lors de l'envoi de votre demande de devis: " + (result.message || "Erreur inconnue"));
+                }
+            } catch (error) {
+                console.error("Erreur détaillée:", error);
+                alert("Une erreur est survenue lors de l'envoi de votre demande. Veuillez réessayer.");
+            }
+        });
     }
 });

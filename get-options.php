@@ -3,57 +3,56 @@ require_once 'config.php';
 
 header('Content-Type: application/json');
 
-// Accepter le paramètre 'statuts' qui peut être un tableau
-$statuts = $_GET['statuts'] ?? [];
-
-// Vérifier si des statuts ont été fournis et qu'il s'agit bien d'un tableau non vide
-if (!is_array($statuts) || empty($statuts)) {
-    // Si aucun statut n'est fourni ou si le paramètre n'est pas un tableau, retourner une liste vide d'options.
-    echo json_encode(['success' => true, 'options' => []]);
-    exit;
-}
-
-// Créer une chaîne de placeholders pour la clause IN
-$placeholders = implode(', ', array_fill(0, count($statuts), '?'));
+// Log le contenu de $_GET pour un débogage détaillé
+error_log("get-options.php: Contenu de \$_GET: " . var_export($_GET, true));
 
 try {
-    // Récupérer les options avec leurs prix pour les types de carrosserie donnés
-    // Utiliser WHERE IN pour les statuts et passer les statuts comme paramètres à execute
-    $sql = "
-        SELECT o.*,
-               c.nom as categorie_nom,
-               ovc.prix,
-               GROUP_CONCAT(DISTINCT oi.image_path) as images
-        FROM options o
-        LEFT JOIN categories_options c ON o.id_categorie = c.id
-        JOIN option_vehicule_compatibilite ovc ON o.id = ovc.id_option
-        LEFT JOIN option_images oi ON o.id = oi.id_option
-        WHERE ovc.type_carrosserie IN ($placeholders)
-        GROUP BY o.id
-        ORDER BY c.nom, o.nom
-    ";
-    
-    $stmt = $pdo->prepare($sql);
-    // Passer le tableau de statuts directement à execute
-    $stmt->execute($statuts);
+    // $modele_id = $_GET['modele_id'] ?? null; // No longer needed for compatibility logic
+    $type_carrosserie = $_GET['type_carrosserie'] ?? null;
 
-    $options = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Transformer la chaîne d'images en tableaux et formater les prix
-    $optionsWithImages = []; // Nouveau tableau pour stocker les options avec images traitées
-    foreach ($options as $option) {
-        $option['images'] = $option['images'] ? array_map(function($image) { return 'images/options/' . htmlspecialchars($image); }, explode(',', $option['images'])) : [];
-        $option['prix'] = floatval($option['prix'] ?? 0); // Utiliser 0 si prix est null
-        $optionsWithImages[] = $option; // Ajouter l'option traitée au nouveau tableau
+    // Nettoyer la valeur du type de carrosserie
+    $type_carrosserie = trim($type_carrosserie);
+
+    // Ajout de logs pour débogage après nettoyage
+    error_log("get-options.php: Reçu (après trim) type_carrosserie = [" . $type_carrosserie . "]");
+    error_log("get-options.php: empty(type_carrosserie) est : " . (empty($type_carrosserie) ? 'true' : 'false'));
+
+    if (empty($type_carrosserie)) { // Utiliser empty() pour une vérification plus robuste
+        error_log("get-options.php: Erreur - type_carrosserie est vide ou null.");
+        throw new Exception('Paramètre type_carrosserie manquant ou vide');
     }
-    
-    echo json_encode(['success' => true, 'options' => $optionsWithImages]);
 
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Erreur lors de la récupération des options : ' . $e->getMessage()]);
+    // Modified SQL query
+    $sql = "SELECT o.id, o.nom, o.description, o.id_categorie,
+                   ovc.prix AS compatible_prix,
+                   GROUP_CONCAT(DISTINCT oi.image_path) as images
+            FROM options o
+            INNER JOIN option_vehicule_compatibilite ovc ON o.id = ovc.id_option
+            LEFT JOIN option_images oi ON o.id = oi.id_option
+            WHERE ovc.type_carrosserie = ?
+            GROUP BY o.id, o.nom, o.description, o.id_categorie, compatible_prix
+            ORDER BY o.nom";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$type_carrosserie]);
+    $options = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    error_log("get-options.php: Contenu des options récupérées : " . print_r($options, true));
+
+    // Transformer les images en tableau et ajouter le préfixe du chemin
+    foreach ($options as &$option) {
+        $option['images'] = $option['images'] ? explode(',', $option['images']) : [];
+        // Use 'compatible_prix' here instead of 'prix'
+        $option['prix'] = floatval($option['compatible_prix']);
+        $option['images'] = array_map(function($path) {
+            return 'images/options/' . $path;
+        }, $option['images']);
+    }
+
+    echo json_encode($options);
 } catch (Exception $e) {
-     http_response_code(500);
-     echo json_encode(['success' => false, 'error' => 'Erreur générale lors de la récupération des options : ' . $e->getMessage()]);
+    error_log("Erreur dans get-options.php: " . $e->getMessage()); // Log the actual exception message
+    http_response_code(400);
+    echo json_encode(['error' => $e->getMessage()]);
 }
 ?> 
