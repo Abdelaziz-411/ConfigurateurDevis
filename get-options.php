@@ -25,18 +25,18 @@ try {
     // Modified SQL query
     $sql = "SELECT o.id, o.nom, o.description, o.id_categorie,
                    ovc.prix AS compatible_prix,
-                   GROUP_CONCAT(DISTINCT oi.image_path) as images
-            FROM options o
+               GROUP_CONCAT(DISTINCT oi.image_path) as images
+        FROM options o
             INNER JOIN option_vehicule_compatibilite ovc ON o.id = ovc.id_option
-            LEFT JOIN option_images oi ON o.id = oi.id_option
+        LEFT JOIN option_images oi ON o.id = oi.id_option
             WHERE ovc.type_carrosserie = ?
             GROUP BY o.id, o.nom, o.description, o.id_categorie, compatible_prix
             ORDER BY o.nom";
-
+    
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$type_carrosserie]);
     $options = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
+    
     error_log("get-options.php: Contenu des options récupérées : " . print_r($options, true));
 
     // Transformer les images en tableau et ajouter le préfixe du chemin

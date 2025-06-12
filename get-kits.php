@@ -25,17 +25,17 @@ try {
     $sql = "SELECT k.*,
                    kvc.prix,
                    GROUP_CONCAT(DISTINCT ki.image_path) as images
-            FROM kits k
+        FROM kits k
             INNER JOIN kit_vehicule_compatibilite kvc ON k.id = kvc.id_kit
-            LEFT JOIN kit_images ki ON k.id = ki.id_kit
+        LEFT JOIN kit_images ki ON k.id = ki.id_kit
             WHERE kvc.type_carrosserie = ?
             GROUP BY k.id, kvc.prix
             ORDER BY k.nom";
-
+    
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$type_carrosserie]);
     $kits = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
+    
     // Transformer les images en tableau et ajouter le préfixe du chemin
     foreach ($kits as &$kit) {
         $kit['images'] = $kit['images'] ? explode(',', $kit['images']) : [];

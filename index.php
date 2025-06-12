@@ -141,19 +141,19 @@ $vehicules = $pdo->query("SELECT * FROM vehicules ORDER BY nom")->fetchAll(PDO::
                                         <label for="annee" class="form-label">Année du véhicule</label>
                                         <input type="number" class="form-control" id="annee" name="annee" min="1900" max="2024">
                                         <div class="form-text">Optionnel</div>
-                                    </div>
+                            </div>
 
                                     <!-- Champ pour type de carrosserie personnalisé -->
                                     <div class="mb-4">
                                         <label for="type-carrosserie-personnalise" class="form-label">Type de carrosserie *</label>
                                         <select class="form-select" id="type-carrosserie-personnalise" name="type-carrosserie-personnalise" required>
                                             <option value="">Sélectionnez un type</option>
-                                            <option value="Berline">Berline</option>
-                                            <option value="SUV">SUV</option>
-                                            <option value="Break">Break</option>
-                                            <option value="Coupé">Coupé</option>
-                                            <option value="Cabriolet">Cabriolet</option>
-                                            <!-- Ajoutez d'autres types si nécessaire -->
+                                            <option value="L1H1">L1H1</option>
+                                            <option value="L2H1">L2H1</option>
+                                            <option value="L2H2">L2H2</option>
+                                            <option value="L3H2">L3H2</option>
+                                            <option value="L3H3">L3H3</option>
+                                            <option value="L4H3">L4H3</option>
                                         </select>
                                         <div class="invalid-feedback">
                                             Veuillez sélectionner un type de carrosserie
@@ -175,72 +175,44 @@ $vehicules = $pdo->query("SELECT * FROM vehicules ORDER BY nom")->fetchAll(PDO::
 
         <!-- Configurateur -->
         <div id="configurateur" style="display: none;">
-            <!-- Étape 2 : Sélection du kit -->
-            <section id="step-kit" class="mb-5 fade-in-section">
-                <h2 class="mb-4"><i class="bi bi-2-circle"></i> Choisissez votre kit d'aménagement</h2>
-                <div id="kit-gallery" class="row g-4">
-                    <!-- Les kits seront chargés dynamiquement ici -->
-                </div>
-            </section>
+        <!-- Étape 2 : Sélection du kit -->
+        <section id="step-kit" class="mb-5 fade-in-section">
+            <h2 class="mb-4"><i class="bi bi-2-circle"></i> Choisissez votre kit d'aménagement</h2>
+            <div id="kit-gallery" class="row g-4">
+                <!-- Les kits seront chargés dynamiquement ici -->
+            </div>
+        </section>
 
-            <!-- Étape 3 : Options supplémentaires -->
-            <section id="step-options" class="mb-5 fade-in-section">
-                <h2 class="mb-4"><i class="bi bi-3-circle"></i> Personnalisez avec des options</h2>
+        <!-- Étape 3 : Options supplémentaires -->
+        <section id="step-options" class="mb-5 fade-in-section">
+            <h2 class="mb-4"><i class="bi bi-3-circle"></i> Personnalisez avec des options</h2>
                 <div id="options-container" class="option-container row g-4">
-                    <!-- Les options seront chargées dynamiquement ici -->
-                </div>
-            </section>
+                <!-- Les options seront chargées dynamiquement ici -->
+            </div>
+        </section>
 
-            <!-- Section récapitulatif -->
-            <div id="recap" class="mt-4 fade-in-section">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h3 class="mb-0">Récapitulatif</h3>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="prixTTC" checked>
-                            <label class="form-check-label" for="prixTTC">Prix TTC</label>
-                        </div>
+        <!-- Section récapitulatif -->
+        <div id="recap" class="mt-4 fade-in-section">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Récapitulatif</h3>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="prixTTC" checked>
+                        <label class="form-check-label" for="prixTTC">Prix TTC</label>
                     </div>
-                    <div class="card-body">
-                        <div id="recap-details">
-                            <div class="recap-section">
-                                <h4>Véhicule sélectionné</h4>
-                                <div id="recap-vehicule">
-                                    <em>Aucun véhicule sélectionné</em>
-                                </div>
-                            </div>
-                            <div class="recap-section">
-                                <h4>Kit sélectionné</h4>
-                                <div id="recap-kit">
-                                    <em>Aucun kit sélectionné</em>
-                                </div>
-                            </div>
-                            <div class="recap-section">
-                                <h4>Options sélectionnées</h4>
-                                <div id="recap-options">
-                                    <em>Aucune option sélectionnée</em>
-                                </div>
-                            </div>
-                            <div class="recap-section border-top pt-3 mt-3">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h4 class="mb-0">Total HT</h4>
-                                    <p class="h3 mb-0" id="recap-total-ht">0,00 € HT</p>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center mt-2">
-                                    <h4 class="mb-0">Total TTC</h4>
-                                    <p class="h3 mb-0" id="recap-total-ttc">0,00 € TTC</p>
-                                </div>
-                            </div>
-                        </div>
+                </div>
+                <div class="card-body">
+                    <div id="recap-details">
+                        <!-- Le contenu sera généré dynamiquement par JavaScript -->
                     </div>
-                    <div class="card-footer">
-                        <button class="btn btn-success w-100" id="btnDemandeDevis">
-                            Demander un devis
-                        </button>
-                        <button class="btn btn-secondary w-100 mt-2" id="btnResetConfig">
-                            Réinitialiser
-                        </button>
-                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-success w-100" id="btnDemandeDevis">
+                        Demander un devis
+                    </button>
+                    <button class="btn btn-secondary w-100 mt-2" id="btnResetConfig">
+                        Réinitialiser
+                    </button>
                 </div>
             </div>
         </div>

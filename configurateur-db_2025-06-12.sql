@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le : jeu. 05 juin 2025 à 13:26
+-- Généré le : jeu. 12 juin 2025 à 10:05
 -- Version du serveur : 8.2.0
 -- Version de PHP : 8.3.0
 
@@ -62,6 +62,7 @@ CREATE TABLE `devis` (
   `telephone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
   `id_vehicule` int NOT NULL,
+  `type_carrosserie` varchar(10) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `id_kit` int DEFAULT NULL,
   `configuration` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `prix_ht` decimal(10,2) NOT NULL,
@@ -74,8 +75,8 @@ CREATE TABLE `devis` (
 -- Déchargement des données de la table `devis`
 --
 
-INSERT INTO `devis` (`id`, `has_vehicle`, `nom`, `prenom`, `email`, `telephone`, `message`, `id_vehicule`, `id_kit`, `configuration`, `prix_ht`, `prix_ttc`, `statut`, `date_creation`) VALUES
-(6, NULL, 'Khalifa', 'Abdelaziz', 'mtzm72727@gmail.com', '+33760682806', '', 1, 3, 'Véhicule\n\nL1H1\n\nKit d\'aménagement\n\ntest - 2840,40 € TTC\n\nTotal TTC\n\n2840,40 €\n\nTotal HT\n2367,00 €\nTVA (20%)\n473,40 €', 2367.00, 2840.40, 'nouveau', '2025-06-03 12:37:45');
+INSERT INTO `devis` (`id`, `has_vehicle`, `nom`, `prenom`, `email`, `telephone`, `message`, `id_vehicule`, `type_carrosserie`, `id_kit`, `configuration`, `prix_ht`, `prix_ttc`, `statut`, `date_creation`) VALUES
+(9, NULL, 'Khalifa', 'Abdelaziz', 'mtzm72727@gmail.com', '+33760682806', '', 9, 'L1H2', 1, 'Véhicule: Berlingo (Type: L1H2, Année: 2020)\nKit: Trafic (Prix HT: 4166,67 € HT)\nOptions:\n- Chauffage (Prix HT: 1250,00 € HT)\n', 5416.67, 6500.00, 'nouveau', '2025-06-12 06:37:11');
 
 -- --------------------------------------------------------
 
@@ -145,8 +146,9 @@ CREATE TABLE `kit_vehicule_compatibilite` (
 --
 
 INSERT INTO `kit_vehicule_compatibilite` (`id_kit`, `type_carrosserie`, `prix`) VALUES
-(1, 'L1H2', 5000.00),
+(1, 'L2H1', 5000.00),
 (2, 'L1H1', 1800.00),
+(2, 'L2H1', 1000.00),
 (3, 'L2H1', 2929.00),
 (4, 'L1H1', 2000.00),
 (4, 'L1H2', 0.00),
@@ -216,24 +218,25 @@ CREATE TABLE `modeles` (
   `id_marque` int NOT NULL,
   `nom` varchar(100) NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `status` varchar(10) DEFAULT NULL
+  `status` varchar(10) DEFAULT NULL,
+  `type_carrosserie` varchar(50) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `modeles`
 --
 
-INSERT INTO `modeles` (`id`, `id_marque`, `nom`, `created_at`, `status`) VALUES
-(1, 1, 'Master', '2025-06-04 09:04:41', NULL),
-(2, 1, 'Trafic', '2025-06-04 09:04:41', NULL),
-(3, 1, 'Kangoo', '2025-06-04 09:04:41', NULL),
-(4, 2, 'Boxer', '2025-06-04 09:04:41', NULL),
-(5, 2, 'Expert', '2025-06-04 09:04:41', NULL),
-(6, 2, 'Partner', '2025-06-04 09:04:41', NULL),
-(7, 3, 'Jumper', '2025-06-04 09:04:41', NULL),
-(8, 3, 'Dispatch', '2025-06-04 09:04:41', NULL),
-(9, 3, 'Berlingo', '2025-06-04 09:04:41', 'L1H1'),
-(10, 5, 'Sprinter Fourgon', '2025-06-04 12:41:31', 'L4H3');
+INSERT INTO `modeles` (`id`, `id_marque`, `nom`, `created_at`, `status`, `type_carrosserie`) VALUES
+(1, 1, 'Master', '2025-06-04 09:04:41', NULL, NULL),
+(2, 1, 'Trafic', '2025-06-04 09:04:41', NULL, NULL),
+(3, 1, 'Kangoo', '2025-06-04 09:04:41', NULL, NULL),
+(4, 2, 'Boxer', '2025-06-04 09:04:41', NULL, NULL),
+(5, 2, 'Expert', '2025-06-04 09:04:41', NULL, NULL),
+(6, 2, 'Partner', '2025-06-04 09:04:41', NULL, NULL),
+(7, 3, 'Jumper', '2025-06-04 09:04:41', NULL, NULL),
+(8, 3, 'Dispatch', '2025-06-04 09:04:41', NULL, NULL),
+(9, 3, 'Berlingo', '2025-06-04 09:04:41', 'L1H1', 'L1H1'),
+(10, 5, 'Sprinter Fourgon', '2025-06-04 12:41:31', 'L4H3', 'L3H3');
 
 -- --------------------------------------------------------
 
@@ -254,6 +257,40 @@ CREATE TABLE `modele_images` (
 INSERT INTO `modele_images` (`id`, `id_modele`, `image_path`) VALUES
 (1, 10, '68403efb3e18a_682efb2ecbe14.jpg'),
 (2, 9, '68417557749bb_68359fe0c7f04.jpg');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `modele_statuts`
+--
+
+CREATE TABLE `modele_statuts` (
+  `id` int NOT NULL,
+  `id_modele` int NOT NULL,
+  `statut` varchar(50) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Déchargement des données de la table `modele_statuts`
+--
+
+INSERT INTO `modele_statuts` (`id`, `id_modele`, `statut`) VALUES
+(5, 9, 'L1H1'),
+(6, 9, 'L2H1'),
+(7, 10, 'L3H3'),
+(8, 10, 'L4H3');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `modele_type_carrosserie_compatibilite`
+--
+
+CREATE TABLE `modele_type_carrosserie_compatibilite` (
+  `id` int NOT NULL,
+  `id_modele` int NOT NULL,
+  `type_carrosserie` varchar(50) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -330,11 +367,9 @@ CREATE TABLE `option_vehicule_compatibilite` (
 --
 
 INSERT INTO `option_vehicule_compatibilite` (`id_option`, `type_carrosserie`, `prix`) VALUES
-(2, 'L1H1', 1545.00),
-(2, 'L1H2', 0.00),
-(2, 'L2H1', 0.00),
+(2, 'L1H1', 0.00),
+(2, 'L2H1', 1500.00),
 (2, 'L2H2', 0.00),
-(2, 'L2H3', 0.00),
 (2, 'L3H2', 0.00),
 (2, 'L3H3', 0.00),
 (2, 'L4H3', 0.00);
@@ -536,6 +571,20 @@ ALTER TABLE `modele_images`
   ADD KEY `id_modele` (`id_modele`);
 
 --
+-- Index pour la table `modele_statuts`
+--
+ALTER TABLE `modele_statuts`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `id_modele` (`id_modele`,`statut`);
+
+--
+-- Index pour la table `modele_type_carrosserie_compatibilite`
+--
+ALTER TABLE `modele_type_carrosserie_compatibilite`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `id_modele` (`id_modele`,`type_carrosserie`);
+
+--
 -- Index pour la table `options`
 --
 ALTER TABLE `options`
@@ -620,7 +669,7 @@ ALTER TABLE `categories_options`
 -- AUTO_INCREMENT pour la table `devis`
 --
 ALTER TABLE `devis`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT pour la table `kits`
@@ -657,6 +706,18 @@ ALTER TABLE `modeles`
 --
 ALTER TABLE `modele_images`
   MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT pour la table `modele_statuts`
+--
+ALTER TABLE `modele_statuts`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+
+--
+-- AUTO_INCREMENT pour la table `modele_type_carrosserie_compatibilite`
+--
+ALTER TABLE `modele_type_carrosserie_compatibilite`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT pour la table `options`
@@ -714,8 +775,8 @@ ALTER TABLE `vehicules`
 -- Contraintes pour la table `devis`
 --
 ALTER TABLE `devis`
-  ADD CONSTRAINT `devis_ibfk_1` FOREIGN KEY (`id_vehicule`) REFERENCES `vehicules` (`id`),
-  ADD CONSTRAINT `devis_ibfk_2` FOREIGN KEY (`id_kit`) REFERENCES `kits` (`id`);
+  ADD CONSTRAINT `devis_ibfk_2` FOREIGN KEY (`id_kit`) REFERENCES `kits` (`id`),
+  ADD CONSTRAINT `fk_devis_modele` FOREIGN KEY (`id_vehicule`) REFERENCES `modeles` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 --
 -- Contraintes pour la table `kit_images`
@@ -746,6 +807,18 @@ ALTER TABLE `modeles`
 --
 ALTER TABLE `modele_images`
   ADD CONSTRAINT `modele_images_ibfk_1` FOREIGN KEY (`id_modele`) REFERENCES `modeles` (`id`) ON DELETE CASCADE;
+
+--
+-- Contraintes pour la table `modele_statuts`
+--
+ALTER TABLE `modele_statuts`
+  ADD CONSTRAINT `modele_statuts_ibfk_1` FOREIGN KEY (`id_modele`) REFERENCES `modeles` (`id`) ON DELETE CASCADE;
+
+--
+-- Contraintes pour la table `modele_type_carrosserie_compatibilite`
+--
+ALTER TABLE `modele_type_carrosserie_compatibilite`
+  ADD CONSTRAINT `modele_type_carrosserie_compatibilite_ibfk_1` FOREIGN KEY (`id_modele`) REFERENCES `modeles` (`id`) ON DELETE CASCADE;
 
 --
 -- Contraintes pour la table `options`

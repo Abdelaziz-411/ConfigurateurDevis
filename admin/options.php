@@ -175,7 +175,15 @@ foreach ($options as &$option) {
 }
 
 // Récupérer la liste des types de carrosserie pour le formulaire
-$types_carrosserie = $pdo->query("SELECT DISTINCT type_carrosserie FROM option_vehicule_compatibilite ORDER BY type_carrosserie")->fetchAll(PDO::FETCH_ASSOC);
+$types_carrosserie = [
+    ['type_carrosserie' => 'L1H1'],
+    ['type_carrosserie' => 'L2H1'],
+    ['type_carrosserie' => 'L2H2'],
+    ['type_carrosserie' => 'L3H2'],
+    ['type_carrosserie' => 'L3H3'],
+    ['type_carrosserie' => 'L4H3']
+];
+error_log("Types de carrosserie récupérés : " . print_r($types_carrosserie, true));
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">

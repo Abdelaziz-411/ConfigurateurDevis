@@ -116,20 +116,15 @@ try {
 }
 
 // Récupérer la liste des types de carrosserie pour le formulaire
-$types_carrosserie = $pdo->query("SELECT DISTINCT type_carrosserie FROM kit_vehicule_compatibilite ORDER BY type_carrosserie")->fetchAll(PDO::FETCH_ASSOC);
+$types_carrosserie = [
+    ['type_carrosserie' => 'L1H1'],
+    ['type_carrosserie' => 'L2H1'],
+    ['type_carrosserie' => 'L2H2'],
+    ['type_carrosserie' => 'L3H2'],
+    ['type_carrosserie' => 'L3H3'],
+    ['type_carrosserie' => 'L4H3']
+];
 error_log("Types de carrosserie récupérés : " . print_r($types_carrosserie, true));
-
-// Si aucun type de carrosserie n'est trouvé, utiliser une liste par défaut
-if (empty($types_carrosserie)) {
-    $types_carrosserie = [
-        ['type_carrosserie' => 'Berline'],
-        ['type_carrosserie' => 'SUV'],
-        ['type_carrosserie' => 'Break'],
-        ['type_carrosserie' => 'Coupé'],
-        ['type_carrosserie' => 'Cabriolet']
-    ];
-    error_log("Utilisation des types de carrosserie par défaut");
-}
 
 // Gestion des actions
 $action = $_GET['action'] ?? 'list';
@@ -320,44 +315,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Récupérer la liste des types de carrosserie pour le formulaire
-$types_carrosserie = $pdo->query("SELECT DISTINCT type_carrosserie FROM kit_vehicule_compatibilite ORDER BY type_carrosserie")->fetchAll(PDO::FETCH_ASSOC);
-error_log("Types de carrosserie récupérés : " . print_r($types_carrosserie, true));
-
-// Si aucun type de carrosserie n'est trouvé, utiliser une liste par défaut
-if (empty($types_carrosserie)) {
-    $types_carrosserie = [
-        ['type_carrosserie' => 'Berline'],
-        ['type_carrosserie' => 'SUV'],
-        ['type_carrosserie' => 'Break'],
-        ['type_carrosserie' => 'Coupé'],
-        ['type_carrosserie' => 'Cabriolet']
-    ];
-    error_log("Utilisation des types de carrosserie par défaut");
-}
-
-// Gestion des actions
-$action = $_GET['action'] ?? 'list';
-$id = $_GET['id'] ?? null;
-$message = '';
-
-// Transformer les chaînes en tableaux - C'EST CETTE BOUCLE QUI EST REDONDANTE ET CAUSE L'ERREUR
-/*
-foreach ($kits as &$kit) {
-    $kit['images'] = $kit['images'] ? explode(',', $kit['images']) : [];
-    $kit['types_prix'] = $kit['types_prix'] ? array_reduce(
-        explode(',', $kit['types_prix']),
-        function($carry, $item) {
-            list($type, $prix) = explode(':', $item);
-            $carry[$type] = $prix;
-            return $carry;
-        },
-        []
-    ) : [];
-}
-*/
-
-// Récupérer la liste des types de carrosserie pour le formulaire
-$types_carrosserie = $pdo->query("SELECT DISTINCT type_carrosserie FROM kit_vehicule_compatibilite ORDER BY type_carrosserie")->fetchAll(PDO::FETCH_ASSOC);
+$types_carrosserie = [
+    ['type_carrosserie' => 'L1H1'],
+    ['type_carrosserie' => 'L2H1'],
+    ['type_carrosserie' => 'L2H2'],
+    ['type_carrosserie' => 'L3H2'],
+    ['type_carrosserie' => 'L3H3'],
+    ['type_carrosserie' => 'L4H3']
+];
 ?>
 
 <?php if ($action === 'list'): ?>

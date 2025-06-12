@@ -68,14 +68,14 @@ try {
 // Récupérer la liste des marques pour le formulaire
 $marques = $pdo->query("SELECT * FROM marques ORDER BY nom")->fetchAll(PDO::FETCH_ASSOC);
 
-// Liste des statuts de carrosserie possibles (L1H1, etc.)
+// Liste des statuts de carrosserie possibles
 $statuts_possibles = [
     'L1H1',
-    'L1H2',
     'L2H1',
     'L2H2',
     'L3H2',
-    'L3H3'
+    'L3H3',
+    'L4H3'
 ];
 
 // Gestion des actions

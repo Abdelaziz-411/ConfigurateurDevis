@@ -37,7 +37,7 @@ try {
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$id_marque]);
         $modeles = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
+
         // Transformer les chaînes en tableaux
         foreach ($modeles as &$modele) {
             $modele['images'] = $modele['images'] ? array_map(function($image) { 
@@ -47,7 +47,7 @@ try {
             // Utiliser directement les types de carrosserie récupérés de modele_statuts
             $modele['types_carrosserie'] = $modele['types_carrosserie'] ? array_filter(explode(',', $modele['types_carrosserie'])) : [];
         }
-        
+
         echo json_encode($modeles);
 
     } else {
