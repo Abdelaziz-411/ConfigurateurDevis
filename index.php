@@ -48,63 +48,135 @@ $vehicules = $pdo->query("SELECT * FROM vehicules ORDER BY nom")->fetchAll(PDO::
     <!-- Contenu principal -->
     <div class="container">
         <!-- Étape 1 : Sélection du véhicule -->
-        <section id="step-vehicule" class="mb-5">
-            <h2 class="mb-4"><i class="bi bi-1-circle"></i> Choisissez votre véhicule</h2>
-            <div class="row g-4">
-                <?php foreach ($vehicules as $vehicule): ?>
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card h-100 vehicule-card" data-id="<?= $vehicule['id'] ?>">
-                            <div id="vehiculeCarousel<?= $vehicule['id'] ?>" class="carousel slide" data-bs-ride="carousel">
-                                <div class="carousel-inner">
-                                    <?php
-                                    $stmt = $pdo->prepare("SELECT image_path FROM vehicle_images WHERE id_vehicule = ?");
-                                    $stmt->execute([$vehicule['id']]);
-                                    $images = $stmt->fetchAll(PDO::FETCH_COLUMN);
-                                    if (empty($images)) {
-                                        echo '<div class="carousel-item active">
-                                                <img src="images/vehicules/default.jpg" class="card-img-top" alt="' . htmlspecialchars($vehicule['nom']) . '">
-                                            </div>';
-                                    } else {
-                                        foreach ($images as $index => $image) {
-                                            echo '<div class="carousel-item ' . ($index === 0 ? 'active' : '') . '">
-                                                    <img src="images/vehicules/' . htmlspecialchars($image) . '" class="card-img-top" alt="' . htmlspecialchars($vehicule['nom']) . '">
-                                                </div>';
-                                        }
-                                    }
-                                    ?>
-                                </div>
-                                <?php if (count($images) > 1): ?>
-                                    <button class="carousel-control-prev" type="button" data-bs-target="#vehiculeCarousel<?= $vehicule['id'] ?>" data-bs-slide="prev">
-                                        <span class="carousel-control-prev-icon"></span>
-                                    </button>
-                                    <button class="carousel-control-next" type="button" data-bs-target="#vehiculeCarousel<?= $vehicule['id'] ?>" data-bs-slide="next">
-                                        <span class="carousel-control-next-icon"></span>
-                                    </button>
-                                <?php endif; ?>
-                            </div>
+        <section id="step-vehicule" class="fade-in-section">
+            <div class="container">
+                <h2 class="text-center mb-4">Sélectionnez votre véhicule</h2>
+                
+                <!-- Question sur la possession du véhicule -->
+                <div class="row justify-content-center mb-4">
+                    <div class="col-md-8">
+                        <div class="card">
                             <div class="card-body">
-                                <h5 class="card-title"><?= htmlspecialchars($vehicule['nom']) ?></h5>
-                                <p class="card-text">
-                                    <small class="text-muted">
-                                        Longueur: <?= $vehicule['longueur'] ?><br>
-                                        Hauteur: <?= $vehicule['hauteur'] ?>
-                                    </small>
-                                </p>
-                                <p class="card-text"><?= htmlspecialchars($vehicule['description'] ?? '') ?></p>
-                            </div>
-                            <div class="card-footer bg-transparent">
-                                <button class="btn btn-primary w-100 select-vehicule" data-id="<?= $vehicule['id'] ?>">
-                                    Sélectionner
-                                </button>
+                                <h3 class="card-title mb-4">Possédez-vous déjà un véhicule ?</h3>
+                                <div class="d-flex gap-3 justify-content-center">
+                                    <button class="btn btn-outline-primary btn-lg" onclick="showVehicleSelection(true)" id="btnExistingVehicle">
+                                        <i class="bi bi-check-circle"></i> Oui
+                                    </button>
+                                    <button class="btn btn-outline-primary btn-lg" onclick="showVehicleSelection(false)" id="btnNewVehicle">
+                                        <i class="bi bi-x-circle"></i> Non
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                <?php endforeach; ?>
+                </div>
+
+                <!-- Formulaire de sélection du véhicule existant -->
+                <div id="existing-vehicle-selection" class="row justify-content-center" style="display: none;">
+                     <div class="col-12">
+                         <h3 class="mb-3">Choisissez une marque</h3>
+                         <div id="marques-list" class="row g-4 mb-4">
+                            <!-- Les cartes de marques seront chargées ici -->
+                         </div>
+                         
+                         <h3 class="mb-3" id="modeles-title" style="display: none;">Choisissez un modèle</h3>
+                         <div id="modeles-list" class="row g-4 mb-4">
+                            <!-- Les cartes de modèles seront chargées ici -->
+                         </div>
+
+                         <button class="btn btn-secondary mt-3" onclick="resetVehicleSelection()">Annuler la sélection</button>
+                     </div>
+                </div>
+
+                <!-- Formulaire de sélection du véhicule personnalisé -->
+                <div id="vehicle-selection-form" class="row justify-content-center" style="display: none;">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-body">
+                                <form id="vehicleForm" class="needs-validation" novalidate>
+                                    <!-- Sélection de la marque -->
+                                    <div class="mb-4">
+                                        <label for="marque" class="form-label">Marque du véhicule *</label>
+                                        <select class="form-select" id="marque" name="marque" required>
+                                            <option value="">Sélectionnez une marque</option>
+                                            <option value="autre">Autre</option>
+                                        </select>
+                                        <div class="invalid-feedback">
+                                            Veuillez sélectionner une marque
+                                        </div>
+                                    </div>
+
+                                    <!-- Champ pour marque personnalisée -->
+                                    <div id="marque-personnalisee-group" class="mb-4" style="display: none;">
+                                        <label for="marque-personnalisee" class="form-label">Précisez la marque *</label>
+                                        <input type="text" class="form-control" id="marque-personnalisee" name="marque-personnalisee">
+                                        <div class="invalid-feedback">
+                                            Veuillez préciser la marque
+                                        </div>
+                                    </div>
+
+                                    <!-- Sélection du modèle -->
+                                    <div class="mb-4">
+                                        <label for="modele" class="form-label">Modèle du véhicule *</label>
+                                        <select class="form-select" id="modele" name="modele" required>
+                                            <option value="">Sélectionnez d'abord une marque</option>
+                                            <option value="autre">Autre</option>
+                                        </select>
+                                        <div class="invalid-feedback">
+                                            Veuillez sélectionner un modèle
+                                        </div>
+                                    </div>
+
+                                    <!-- Champ pour modèle personnalisé -->
+                                    <div id="modele-personnalise-group" class="mb-4" style="display: none;">
+                                        <label for="modele-personnalise" class="form-label">Précisez le modèle *</label>
+                                        <input type="text" class="form-control" id="modele-personnalise" name="modele-personnalise">
+                                        <div class="invalid-feedback">
+                                            Veuillez préciser le modèle
+                                        </div>
+                                    </div>
+
+                                    <!-- Année du véhicule -->
+                                    <div class="mb-4">
+                                        <label for="annee" class="form-label">Année du véhicule</label>
+                                        <input type="number" class="form-control" id="annee" name="annee" min="1900" max="2024">
+                                        <div class="form-text">Optionnel</div>
+                            </div>
+
+                                    <!-- Champ pour type de carrosserie personnalisé -->
+                                    <div class="mb-4">
+                                        <label for="type-carrosserie-personnalise" class="form-label">Type de carrosserie *</label>
+                                        <select class="form-select" id="type-carrosserie-personnalise" name="type-carrosserie-personnalise" required>
+                                            <option value="">Sélectionnez un type</option>
+                                            <option value="L1H1">L1H1</option>
+                                            <option value="L2H1">L2H1</option>
+                                            <option value="L2H2">L2H2</option>
+                                            <option value="L3H2">L3H2</option>
+                                            <option value="L3H3">L3H3</option>
+                                            <option value="L4H3">L4H3</option>
+                                        </select>
+                                        <div class="invalid-feedback">
+                                            Veuillez sélectionner un type de carrosserie
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-center">
+                                        <button type="submit" class="btn btn-primary btn-lg">
+                                            Valider la sélection
+                                </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
+        <!-- Configurateur -->
+        <div id="configurateur" style="display: none;">
         <!-- Étape 2 : Sélection du kit -->
-        <section id="step-kit" class="mb-5" style="display: none;">
+        <section id="step-kit" class="mb-5 fade-in-section">
             <h2 class="mb-4"><i class="bi bi-2-circle"></i> Choisissez votre kit d'aménagement</h2>
             <div id="kit-gallery" class="row g-4">
                 <!-- Les kits seront chargés dynamiquement ici -->
@@ -112,15 +184,15 @@ $vehicules = $pdo->query("SELECT * FROM vehicules ORDER BY nom")->fetchAll(PDO::
         </section>
 
         <!-- Étape 3 : Options supplémentaires -->
-        <section id="step-options" class="mb-5" style="display: none;">
+        <section id="step-options" class="mb-5 fade-in-section">
             <h2 class="mb-4"><i class="bi bi-3-circle"></i> Personnalisez avec des options</h2>
-            <div class="option-container row g-4">
+                <div id="options-container" class="option-container row g-4">
                 <!-- Les options seront chargées dynamiquement ici -->
             </div>
         </section>
 
         <!-- Section récapitulatif -->
-        <div id="recap" class="mt-4" style="display: none;">
+        <div id="recap" class="mt-4 fade-in-section">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3 class="mb-0">Récapitulatif</h3>
@@ -130,11 +202,16 @@ $vehicules = $pdo->query("SELECT * FROM vehicules ORDER BY nom")->fetchAll(PDO::
                     </div>
                 </div>
                 <div class="card-body">
-                    <div id="recap-details"></div>
+                    <div id="recap-details">
+                        <!-- Le contenu sera généré dynamiquement par JavaScript -->
+                    </div>
                 </div>
                 <div class="card-footer">
                     <button class="btn btn-success w-100" id="btnDemandeDevis">
                         Demander un devis
+                    </button>
+                    <button class="btn btn-secondary w-100 mt-2" id="btnResetConfig">
+                        Réinitialiser
                     </button>
                 </div>
             </div>
@@ -149,7 +226,7 @@ $vehicules = $pdo->query("SELECT * FROM vehicules ORDER BY nom")->fetchAll(PDO::
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer" tabindex="0"></button>
                     </div>
                     <div class="modal-body">
-                        <form id="formDevis">
+                        <form id="formDevis" novalidate>
                             <div class="mb-3">
                                 <label for="nom" class="form-label">Nom *</label>
                                 <input type="text" class="form-control" id="nom" name="nom" required autocomplete="family-name">
@@ -175,7 +252,7 @@ $vehicules = $pdo->query("SELECT * FROM vehicules ORDER BY nom")->fetchAll(PDO::
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Annuler" tabindex="0">Annuler</button>
-                        <button type="button" class="btn btn-primary" id="btnEnvoyerDevis" aria-label="Envoyer la demande" tabindex="0">Envoyer</button>
+                        <button type="submit" form="formDevis" class="btn btn-primary" aria-label="Envoyer la demande" tabindex="0">Envoyer</button>
                     </div>
                 </div>
             </div>

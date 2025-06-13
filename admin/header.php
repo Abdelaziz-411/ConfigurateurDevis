@@ -7,10 +7,11 @@ require '../config.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Administration - Configurateur</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <title>Administration - Configurateur de Véhicules</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="admin-style.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -199,22 +200,25 @@ require '../config.php';
 
     <div class="container">
         <div class="nav">
-            <a href="index.php" <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'class="active"' : ''; ?>>
+            <a href="index.php" <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'class="active"' : ''; ?> >
                 <i class="bi bi-speedometer2"></i> Tableau de bord
             </a>
-            <a href="vehicules.php" <?php echo basename($_SERVER['PHP_SELF']) == 'vehicules.php' ? 'class="active"' : ''; ?>>
+            <a href="modeles.php" <?php echo basename($_SERVER['PHP_SELF']) == 'vehicules.php' || basename($_SERVER['PHP_SELF']) == 'modeles.php' ? 'class="active"' : ''; ?> >
                 <i class="bi bi-truck"></i> Véhicules
             </a>
-            <a href="kits.php" <?php echo basename($_SERVER['PHP_SELF']) == 'kits.php' ? 'class="active"' : ''; ?>>
+            <a href="kits.php" <?php echo basename($_SERVER['PHP_SELF']) == 'kits.php' ? 'class="active"' : ''; ?> >
                 <i class="bi bi-box"></i> Kits
             </a>
-            <a href="options.php" <?php echo basename($_SERVER['PHP_SELF']) == 'options.php' ? 'class="active"' : ''; ?>>
+            <a href="options.php" <?php echo basename($_SERVER['PHP_SELF']) == 'options.php' ? 'class="active"' : ''; ?> >
                 <i class="bi bi-gear"></i> Options
             </a>
-            <a href="gestion_images.php" <?php echo basename($_SERVER['PHP_SELF']) == 'gestion_images.php' ? 'class="active"' : ''; ?>>
-                <i class="bi bi-images"></i> Gestion des Images
+            <a href="marques.php" <?php echo basename($_SERVER['PHP_SELF']) == 'marques.php' ? 'class="active"' : ''; ?> >
+                <i class="bi bi-tags"></i> Marques
             </a>
-            <a href="devis.php" <?php echo basename($_SERVER['PHP_SELF']) == 'devis.php' ? 'class="active"' : ''; ?>>
+            <a href="categories-options.php" <?php echo basename($_SERVER['PHP_SELF']) == 'categories-options.php' ? 'class="active"' : ''; ?> >
+                <i class="bi bi-tags"></i> Catégories d'options
+            </a>
+            <a href="devis.php" <?php echo basename($_SERVER['PHP_SELF']) == 'devis.php' ? 'class="active"' : ''; ?> >
                 <i class="bi bi-file-earmark-text"></i> Devis
             </a>
             <a href="../" target="_blank">

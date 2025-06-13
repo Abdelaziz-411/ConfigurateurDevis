@@ -8,9 +8,8 @@ if (!isset($_GET['devis_id'])) {
 
 // Récupération des données du devis
 $stmt = $pdo->prepare("
-    SELECT d.*, v.nom as vehicule_nom, k.nom as kit_nom
+    SELECT d.*, d.type_carrosserie, k.nom as kit_nom
     FROM devis d
-    LEFT JOIN vehicules v ON d.id_vehicule = v.id
     LEFT JOIN kits k ON d.id_kit = k.id
     WHERE d.id = ?
 ");
@@ -111,8 +110,8 @@ $pdf->Cell(0, 10, 'Configuration du Véhicule', 0, 1, 'L');
 // Tableau de la configuration
 $pdf->SetFont('helvetica', '', 11);
 $pdf->SetFillColor(247, 247, 247);
-$pdf->Cell(60, 8, 'Véhicule :', 1, 0, 'L', true);
-$pdf->Cell(0, 8, $devis['vehicule_nom'], 1, 1, 'L');
+$pdf->Cell(60, 8, 'Type de carrosserie :', 1, 0, 'L', true);
+$pdf->Cell(0, 8, $devis['type_carrosserie'], 1, 1, 'L');
 if ($devis['kit_nom']) {
     $pdf->Cell(60, 8, 'Kit :', 1, 0, 'L', true);
     $pdf->Cell(0, 8, $devis['kit_nom'], 1, 1, 'L');

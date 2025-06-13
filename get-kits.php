@@ -1,45 +1,54 @@
 <?php
+require_once 'config.php';
+
 header('Content-Type: application/json');
-require 'config.php';
 
-if (!isset($_GET['vehicule_id'])) {
-    echo json_encode(['success' => false, 'message' => 'ID du véhicule manquant']);
-    exit;
-}
-
-$vehicule_id = (int)$_GET['vehicule_id'];
+// Log le contenu de $_GET pour un débogage détaillé
+error_log("get-kits.php: Contenu de \$_GET: " . var_export($_GET, true));
 
 try {
-    // Récupérer uniquement les kits compatibles avec le véhicule sélectionné
-    $stmt = $pdo->prepare("
-        SELECT k.id, k.nom, k.description, kvc.prix, 
-        GROUP_CONCAT(DISTINCT CONCAT('images/kits/', ki.image_path)) as images
+    // $modele_id = $_GET['modele_id'] ?? null; // No longer needed for compatibility logic
+    $type_carrosserie = $_GET['type_carrosserie'] ?? null;
+
+    // Nettoyer la valeur du type de carrosserie
+    $type_carrosserie = trim($type_carrosserie);
+
+    // Ajout de logs pour débogage après nettoyage
+    error_log("get-kits.php: Reçu (après trim) type_carrosserie = [" . $type_carrosserie . "]");
+    error_log("get-kits.php: empty(type_carrosserie) est : " . (empty($type_carrosserie) ? 'true' : 'false'));
+
+    if (empty($type_carrosserie)) { // Utiliser empty() pour une vérification plus robuste
+        error_log("get-kits.php: Erreur - type_carrosserie est vide ou null.");
+        throw new Exception('Paramètre type_carrosserie manquant ou vide');
+    }
+
+    $sql = "SELECT k.*,
+                   kvc.prix,
+                   GROUP_CONCAT(DISTINCT ki.image_path) as images
         FROM kits k
-        INNER JOIN kit_vehicule_compatibilite kvc ON k.id = kvc.id_kit AND kvc.id_vehicule = ?
+            INNER JOIN kit_vehicule_compatibilite kvc ON k.id = kvc.id_kit
         LEFT JOIN kit_images ki ON k.id = ki.id_kit
-        GROUP BY k.id, k.nom, k.description, kvc.prix
-        ORDER BY k.nom
-    ");
+            WHERE kvc.type_carrosserie = ?
+            GROUP BY k.id, kvc.prix
+            ORDER BY k.nom";
     
-    $stmt->execute([$vehicule_id]);
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$type_carrosserie]);
     $kits = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Transformer la chaîne d'images en tableau
+    // Transformer les images en tableau et ajouter le préfixe du chemin
     foreach ($kits as &$kit) {
         $kit['images'] = $kit['images'] ? explode(',', $kit['images']) : [];
-        // Le prix ne peut pas être null car on utilise INNER JOIN
         $kit['prix'] = floatval($kit['prix']);
+        $kit['images'] = array_map(function($path) {
+            return 'images/kits/' . $path;
+        }, $kit['images']);
     }
-    
-    echo json_encode([
-        'success' => true,
-        'kits' => $kits
-    ]);
 
-} catch (PDOException $e) {
-    echo json_encode([
-        'success' => false,
-        'message' => 'Erreur lors de la récupération des kits : ' . $e->getMessage()
-    ]);
+    echo json_encode($kits);
+} catch (Exception $e) {
+    error_log("Erreur dans get-kits.php: " . $e->getMessage()); // Log the actual exception message
+    http_response_code(400);
+    echo json_encode(['error' => $e->getMessage()]);
 }
 ?> 
