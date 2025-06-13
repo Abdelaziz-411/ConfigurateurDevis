@@ -4,11 +4,17 @@ require 'check_auth.php';
 
 // Récupérer les marques avec leurs images
 try {
-    $stmt = $pdo->query("SELECT m.*, GROUP_CONCAT(mi.image_path) as images FROM marques m LEFT JOIN marque_images mi ON m.id = mi.id_marque GROUP BY m.id ORDER BY m.nom");
+    // Récupérer les marques de base
+    $stmt = $pdo->query("SELECT * FROM marques ORDER BY nom");
     $marques = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Pour chaque marque, récupérer ses images
     foreach ($marques as &$marque) {
-        $marque['images'] = $marque['images'] ? explode(',', $marque['images']) : [];
+        $stmt = $pdo->prepare("SELECT image_path FROM marque_images WHERE id_marque = ?");
+        $stmt->execute([$marque['id']]);
+        $marque['images'] = $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
+    unset($marque); // Important : détacher la référence
 } catch (PDOException $e) {
     die("Erreur lors de la récupération des marques : " . $e->getMessage());
 }

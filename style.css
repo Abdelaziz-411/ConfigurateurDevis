@@ -1,10 +1,10 @@
 /* Variables et styles de base */
 :root {
     --primary-color: rgb(207, 137, 109);
-    --secondary-color: #2c3e50;
+    --secondary-color: #ebb07f;
     --accent-color: #e74c3c;
-    --background-color: #f8f9fa;
-    --text-color: #2c3e50;
+    --background-color: #e4ceae;
+    --text-color: #964d09;
     --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     --transition: all 0.3s ease;
 }
@@ -105,7 +105,7 @@ body {
 }
 
 .recap-section h4 {
-    color: #495057;
+    color: rgb(180, 110, 85);
     margin-bottom: 0.5rem;
 }
 
@@ -148,7 +148,7 @@ body {
 
 /* Styles pour le footer */
 footer {
-    border-top: 1px solid #dee2e6;
+    border-top: 1px solid #e4ceae;
 }
 
 /* Styles pour les checkboxes */
@@ -178,8 +178,8 @@ footer {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #f8f9fa;
-    color: #6c757d;
+    background-color:#e4ceae;
+    color: rgb(180, 110, 85);
     font-style: italic;
 }
 
@@ -189,7 +189,7 @@ footer {
 }
 
 .kit-card.border-primary, .option-card.border-primary {
-    box-shadow: 0 0 10px rgba(0,123,255,0.3);
+    box-shadow: 0 0 10px rgba(180,110,85,0.3);
 }
 
 /* Animation du prix total */
@@ -220,7 +220,7 @@ footer {
 .description-preview {
     font-size: 0.9rem;
     line-height: 1.5;
-    color: #666;
+    color: #e68e46;
     margin-bottom: 0.5rem;
 }
 

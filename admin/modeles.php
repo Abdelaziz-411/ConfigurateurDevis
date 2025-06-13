@@ -42,25 +42,28 @@ try {
         )");
     }
 
-    $sql = "SELECT m.*, 
-            ma.nom as marque_nom,
-            GROUP_CONCAT(DISTINCT mi.image_path) as images,
-            GROUP_CONCAT(DISTINCT ms.statut) as statuts
+    // Récupérer les modèles de base avec leur marque
+    $sql = "SELECT m.*, ma.nom as marque_nom
             FROM modeles m
             LEFT JOIN marques ma ON m.id_marque = ma.id
-            LEFT JOIN modele_images mi ON m.id = mi.id_modele
-            LEFT JOIN modele_statuts ms ON m.id = ms.id_modele
-            GROUP BY m.id
             ORDER BY ma.nom, m.nom";
     
     $stmt = $pdo->query($sql);
-    $modeles = $stmt->fetchAll();
+    $modeles = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Transformer les données
+    // Pour chaque modèle, récupérer ses images et statuts
     foreach ($modeles as &$modele) {
-        $modele['images'] = $modele['images'] ? explode(',', $modele['images']) : [];
-        $modele['statuts'] = $modele['statuts'] ? explode(',', $modele['statuts']) : [];
+        // Récupérer les images
+        $stmt = $pdo->prepare("SELECT image_path FROM modele_images WHERE id_modele = ?");
+        $stmt->execute([$modele['id']]);
+        $modele['images'] = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        // Récupérer les statuts
+        $stmt = $pdo->prepare("SELECT statut FROM modele_statuts WHERE id_modele = ?");
+        $stmt->execute([$modele['id']]);
+        $modele['statuts'] = $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
+    unset($modele); // Important : détacher la référence
 } catch (Exception $e) {
     die("Une erreur est survenue : " . $e->getMessage());
 }

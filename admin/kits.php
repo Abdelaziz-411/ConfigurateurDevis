@@ -1,119 +1,26 @@
 <?php
 require 'header.php';
 
-// Récupérer les kits avec leurs images et types de carrosserie associés
-try {
-    // Vérifier la connexion à la base de données
-    error_log("Tentative de connexion à la base de données...");
-    
-    // Vérifier si la table kits existe
-    $checkTable = $pdo->query("SHOW TABLES LIKE 'kits'");
-    if ($checkTable->rowCount() === 0) {
-        error_log("La table 'kits' n'existe pas, création en cours...");
-        
-        // Créer la table kits
-        $pdo->exec("CREATE TABLE IF NOT EXISTS kits (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            nom VARCHAR(255) NOT NULL,
-            description TEXT,
-            prix DECIMAL(10,2) DEFAULT 0.00,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )");
+// Récupérer tous les kits de base
+$kits = $pdo->query("SELECT * FROM kits ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
 
-        // Créer la table kit_vehicule_compatibilite
-        $pdo->exec("CREATE TABLE IF NOT EXISTS kit_vehicule_compatibilite (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            id_kit INT NOT NULL,
-            type_carrosserie VARCHAR(10) NOT NULL,
-            prix DECIMAL(10,2) DEFAULT 0.00,
-            FOREIGN KEY (id_kit) REFERENCES kits(id) ON DELETE CASCADE
-        )");
-        
-        // Créer la table kit_images
-        $pdo->exec("CREATE TABLE IF NOT EXISTS kit_images (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            id_kit INT NOT NULL,
-            image_path VARCHAR(255) NOT NULL,
-            FOREIGN KEY (id_kit) REFERENCES kits(id) ON DELETE CASCADE
-        )");
-        
-        error_log("Tables créées avec succès");
-    } else {
-        // Vérifier si la colonne chemin existe dans kit_images
-        $checkColumn = $pdo->query("SHOW COLUMNS FROM kit_images LIKE 'chemin'");
-        if ($checkColumn->rowCount() > 0) {
-            // Renommer la colonne chemin en image_path
-            $pdo->exec("ALTER TABLE kit_images CHANGE chemin image_path VARCHAR(255) NOT NULL");
-            error_log("Colonne 'chemin' renommée en 'image_path'");
-        }
+// Pour chaque kit, récupérer ses types de carrosserie/prix et ses images
+foreach ($kits as &$kit) {
+    // Types de carrosserie et prix
+    $stmt = $pdo->prepare("SELECT type_carrosserie, prix FROM kit_vehicule_compatibilite WHERE id_kit = ?");
+    $stmt->execute([$kit['id']]);
+    $kit['types_carrosserie'] = [];
+    $kit['types_prix'] = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $kit['types_carrosserie'][] = $row['type_carrosserie'];
+        $kit['types_prix'][$row['type_carrosserie']] = $row['prix'];
     }
-    
-    // Vérifier la structure de la table kits
-    $checkStructure = $pdo->query("DESCRIBE kits");
-    $columns = $checkStructure->fetchAll(PDO::FETCH_COLUMN);
-    error_log("Structure de la table kits : " . print_r($columns, true));
-    
-    // Vérifier la structure de la table kit_vehicule_compatibilite
-    $checkStructure = $pdo->query("DESCRIBE kit_vehicule_compatibilite");
-    $columns = $checkStructure->fetchAll(PDO::FETCH_COLUMN);
-    error_log("Structure de la table kit_vehicule_compatibilite : " . print_r($columns, true));
-    
-    // Vérifier la structure de la table kit_images
-    $checkStructure = $pdo->query("DESCRIBE kit_images");
-    $columns = $checkStructure->fetchAll(PDO::FETCH_COLUMN);
-    error_log("Structure de la table kit_images : " . print_r($columns, true));
-    
-    // Vérifier le contenu de la table kits
-    $checkContent = $pdo->query("SELECT COUNT(*) as count FROM kits");
-    $count = $checkContent->fetch()['count'];
-    error_log("Nombre de kits dans la table : " . $count);
-    
-    // Requête principale
-    $sql = "SELECT k.*, 
-            GROUP_CONCAT(DISTINCT kvc.type_carrosserie) as types_carrosserie,
-            GROUP_CONCAT(DISTINCT CONCAT(kvc.type_carrosserie, ':', kvc.prix)) as types_prix,
-               GROUP_CONCAT(DISTINCT ki.image_path) as images
-        FROM kits k
-        LEFT JOIN kit_vehicule_compatibilite kvc ON k.id = kvc.id_kit
-        LEFT JOIN kit_images ki ON k.id = ki.id_kit
-            GROUP BY k.id";
-    
-    error_log("Requête SQL : " . $sql);
-    
-    $stmt = $pdo->query($sql);
-    $kits = $stmt->fetchAll();
-    
-    error_log("Nombre de kits récupérés : " . count($kits));
-    error_log("Contenu des kits : " . print_r($kits, true));
-    
-    // Transformer les données
-    foreach ($kits as &$kit) {
-        // Convertir les types de carrosserie en tableau
-        $kit['types_carrosserie'] = $kit['types_carrosserie'] ? explode(',', $kit['types_carrosserie']) : [];
-        
-        // Convertir les prix en tableau associatif
-        $types_prix = [];
-        if ($kit['types_prix']) {
-            foreach (explode(',', $kit['types_prix']) as $type_prix) {
-                list($type, $prix) = explode(':', $type_prix);
-                $types_prix[$type] = $prix;
-            }
-        }
-        $kit['types_prix'] = $types_prix;
-        
-        // Convertir les images en tableau
-        $kit['images'] = $kit['images'] ? explode(',', $kit['images']) : [];
-    }
-    
-    error_log("Données transformées : " . print_r($kits, true));
-    
-} catch (PDOException $e) {
-    error_log("Erreur SQL : " . $e->getMessage());
-    die("Erreur lors de la requête SQL : " . $e->getMessage());
-} catch (Exception $e) {
-    error_log("Erreur générale : " . $e->getMessage());
-    die("Une erreur est survenue : " . $e->getMessage());
+    // Images
+    $stmt = $pdo->prepare("SELECT image_path FROM kit_images WHERE id_kit = ?");
+    $stmt->execute([$kit['id']]);
+    $kit['images'] = $stmt->fetchAll(PDO::FETCH_COLUMN);
 }
+unset($kit);
 
 // Récupérer la liste des types de carrosserie pour le formulaire
 $types_carrosserie = [
@@ -269,42 +176,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($_POST['action'] === 'delete') {
                 try {
             $id = $_POST['id'];
+            error_log("Tentative de suppression du kit ID: " . $id);
             
                     // Récupérer les images du kit
             $stmt = $pdo->prepare("SELECT image_path FROM kit_images WHERE id_kit = ?");
             $stmt->execute([$id]);
             $images = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            error_log("Images trouvées pour le kit: " . print_r($images, true));
             
                     // Supprimer les fichiers physiques
             foreach ($images as $image) {
                         $path = "../images/kits/" . $image;
                 if (file_exists($path)) {
                     unlink($path);
+                    error_log("Image supprimée: " . $path);
+                } else {
+                    error_log("Image non trouvée: " . $path);
                 }
             }
             
                     // Supprimer les enregistrements de la base de données
                     $pdo->beginTransaction();
+                    error_log("Début de la transaction");
                     
                     // Supprimer les images
                     $stmt = $pdo->prepare("DELETE FROM kit_images WHERE id_kit = ?");
                     $stmt->execute([$id]);
+                    error_log("Images supprimées de la base de données");
                     
                     // Supprimer les compatibilités
                     $stmt = $pdo->prepare("DELETE FROM kit_vehicule_compatibilite WHERE id_kit = ?");
                     $stmt->execute([$id]);
+                    error_log("Compatibilités supprimées de la base de données");
                     
                     // Supprimer le kit
             $stmt = $pdo->prepare("DELETE FROM kits WHERE id = ?");
             $stmt->execute([$id]);
+            error_log("Kit supprimé de la base de données");
                     
                     $pdo->commit();
+            error_log("Transaction validée");
             
             header('Location: kits.php?success=delete');
             exit;
                 } catch (Exception $e) {
                     if ($pdo->inTransaction()) {
                         $pdo->rollBack();
+                        error_log("Transaction annulée");
                     }
                     error_log("Erreur lors de la suppression du kit : " . $e->getMessage());
                     die("Une erreur est survenue lors de la suppression du kit : " . $e->getMessage());
@@ -366,6 +284,7 @@ $types_carrosserie = [
             </thead>
             <tbody>
                 <?php foreach ($kits as $kit): ?>
+                    <?php error_log("Affichage du kit ID: " . $kit['id'] . " - Nom: " . $kit['nom']); ?>
                     <tr>
                         <td><?php echo htmlspecialchars($kit['id']); ?></td>
                         <td><?php echo htmlspecialchars($kit['nom']); ?></td>
@@ -424,16 +343,69 @@ $types_carrosserie = [
     <script>
     function deleteKit(id) {
         if (confirm('Êtes-vous sûr de vouloir supprimer ce kit ?')) {
+            console.log('Suppression du kit ID:', id);
             const form = document.createElement('form');
             form.method = 'POST';
+            form.action = 'kits.php';
             form.innerHTML = `
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="id" value="${id}">
             `;
             document.body.appendChild(form);
+            console.log('Formulaire créé:', form);
             form.submit();
+            console.log('Formulaire soumis');
         }
     }
+
+    // Fonction pour gérer les champs de prix
+    function togglePrixInput(checkbox) {
+        const prixInput = checkbox.parentElement.nextElementSibling.querySelector('.prix-input');
+        if (checkbox.checked) {
+            prixInput.disabled = false;
+            prixInput.required = true;
+            if (!prixInput.value) {
+                prixInput.value = '0.00';
+            }
+        } else {
+            prixInput.disabled = true;
+            prixInput.required = false;
+            prixInput.value = '';
+        }
+    }
+
+    // Fonction pour afficher les images en prévisualisation
+    function previewImages(input) {
+        const previewContainer = document.getElementById('imagePreview');
+        previewContainer.innerHTML = '';
+        
+        if (input.files) {
+            Array.from(input.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const div = document.createElement('div');
+                    div.className = 'preview-image';
+                    div.innerHTML = `
+                        <img src="${e.target.result}" class="img-thumbnail" style="height: 100px;">
+                        <button type="button" class="btn btn-sm btn-danger mt-1" onclick="this.parentElement.remove()">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    `;
+                    previewContainer.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+    }
+
+    // Initialiser les champs de prix pour les types de carrosserie déjà sélectionnés
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.vehicule-check').forEach(checkbox => {
+            if (checkbox.checked) {
+                togglePrixInput(checkbox);
+            }
+        });
+    });
     </script>
 <?php elseif ($action === 'edit' && isset($_GET['id'])): ?>
     <?php

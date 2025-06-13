@@ -148,31 +148,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Récupérer les options avec leurs images et types de carrosserie associés
 $options = $pdo->query("
-    SELECT o.*, 
-           GROUP_CONCAT(DISTINCT CONCAT(ovc.type_carrosserie, ':', ovc.prix)) as types_prix,
-           GROUP_CONCAT(oi.image_path) as images,
-           c.nom as categorie_nom
+    SELECT o.*, c.nom as categorie_nom
     FROM options o
-    LEFT JOIN option_vehicule_compatibilite ovc ON o.id = ovc.id_option
-    LEFT JOIN option_images oi ON o.id = oi.id_option
     LEFT JOIN categories_options c ON o.id_categorie = c.id
-    GROUP BY o.id
     ORDER BY c.ordre, c.nom, o.nom
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-// Transformer les chaînes en tableaux
+// Pour chaque option, récupérer ses types de carrosserie/prix et ses images
 foreach ($options as &$option) {
-    $option['images'] = $option['images'] ? explode(',', $option['images']) : [];
-    $option['types_prix'] = $option['types_prix'] ? array_reduce(
-        explode(',', $option['types_prix']),
-        function($carry, $item) {
-            list($type, $prix) = explode(':', $item);
-            $carry[$type] = $prix;
-            return $carry;
-        },
-        []
-    ) : [];
+    // Types de carrosserie et prix
+    $stmt = $pdo->prepare("SELECT type_carrosserie, prix FROM option_vehicule_compatibilite WHERE id_option = ?");
+    $stmt->execute([$option['id']]);
+    $option['types_prix'] = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $option['types_prix'][$row['type_carrosserie']] = $row['prix'];
+    }
+    
+    // Images
+    $stmt = $pdo->prepare("SELECT image_path FROM option_images WHERE id_option = ?");
+    $stmt->execute([$option['id']]);
+    $option['images'] = $stmt->fetchAll(PDO::FETCH_COLUMN);
 }
+unset($option); // Important : détacher la référence
 
 // Récupérer la liste des types de carrosserie pour le formulaire
 $types_carrosserie = [
