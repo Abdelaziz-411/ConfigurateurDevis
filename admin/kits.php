@@ -3,9 +3,9 @@ require 'header.php';
 
 // Récupérer tous les kits de base
 $kits = $pdo->query("SELECT * FROM kits ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
-
+    
 // Pour chaque kit, récupérer ses types de carrosserie/prix et ses images
-foreach ($kits as &$kit) {
+    foreach ($kits as &$kit) {
     // Types de carrosserie et prix
     $stmt = $pdo->prepare("SELECT type_carrosserie, prix FROM kit_vehicule_compatibilite WHERE id_kit = ?");
     $stmt->execute([$kit['id']]);
@@ -14,7 +14,7 @@ foreach ($kits as &$kit) {
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $kit['types_carrosserie'][] = $row['type_carrosserie'];
         $kit['types_prix'][$row['type_carrosserie']] = $row['prix'];
-    }
+            }
     // Images
     $stmt = $pdo->prepare("SELECT image_path FROM kit_images WHERE id_kit = ?");
     $stmt->execute([$kit['id']]);
@@ -233,7 +233,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Récupérer la liste des types de carrosserie pour le formulaire
-$types_carrosserie = [
+    $types_carrosserie = [
     ['type_carrosserie' => 'L1H1'],
     ['type_carrosserie' => 'L2H1'],
     ['type_carrosserie' => 'L2H2'],

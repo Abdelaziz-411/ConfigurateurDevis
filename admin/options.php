@@ -31,17 +31,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // Vérifier si le prix est défini et le convertir en nombre
                         $prix = 0.00; // Valeur par défaut
                         if (isset($_POST[$prix_key]) && $_POST[$prix_key] !== '') {
+                            // Remplacer la virgule par un point pour la conversion en float
                             $prix = str_replace(',', '.', $_POST[$prix_key]);
+                            // Supprimer tous les espaces
+                            $prix = str_replace(' ', '', $prix);
+                            // Convertir en float
                             $prix = floatval($prix);
                         }
 
                         // Insérer avec une requête préparée
-                        $stmt = $pdo->prepare("INSERT INTO option_vehicule_compatibilite (id_option, type_carrosserie, prix) VALUES (:id_option, :type_carrosserie, :prix)");
-                        $stmt->execute([
-                            ':id_option' => $id,
-                            ':type_carrosserie' => $type,
-                            ':prix' => $prix
-                        ]);
+                        $stmt = $pdo->prepare("INSERT INTO option_vehicule_compatibilite (id_option, type_carrosserie, prix) VALUES (?, ?, ?)");
+                        $stmt->execute([$id, $type, $prix]);
                     }
                     
                     // Gestion des images
@@ -84,20 +84,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $prix_key = 'prix_' . md5($type);
                     
                     // Vérifier si le prix est défini et le convertir en nombre
-                    if (isset($_POST[$prix_key])) {
+                    $prix = 0.00; // Valeur par défaut
+                    if (isset($_POST[$prix_key]) && $_POST[$prix_key] !== '') {
+                        // Remplacer la virgule par un point pour la conversion en float
                         $prix = str_replace(',', '.', $_POST[$prix_key]);
+                        // Supprimer tous les espaces
+                        $prix = str_replace(' ', '', $prix);
+                        // Convertir en float
                         $prix = floatval($prix);
-                    } else {
-                        $prix = 0.00;
                     }
 
                     // Insérer avec une requête préparée
-                    $stmt = $pdo->prepare("INSERT INTO option_vehicule_compatibilite (id_option, type_carrosserie, prix) VALUES (:id_option, :type_carrosserie, :prix)");
-                    $stmt->execute([
-                        ':id_option' => $id,
-                        ':type_carrosserie' => $type,
-                        ':prix' => $prix
-                    ]);
+                    $stmt = $pdo->prepare("INSERT INTO option_vehicule_compatibilite (id_option, type_carrosserie, prix) VALUES (?, ?, ?)");
+                    $stmt->execute([$id, $type, $prix]);
                 }
                 
                 // Gestion des images
@@ -181,6 +180,8 @@ $types_carrosserie = [
     ['type_carrosserie' => 'L4H3']
 ];
 error_log("Types de carrosserie récupérés : " . print_r($types_carrosserie, true));
+
+$categories = $pdo->query("SELECT * FROM categories_options ORDER BY ordre, nom")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -220,6 +221,18 @@ error_log("Types de carrosserie récupérés : " . print_r($types_carrosserie, t
                 <div class="mb-3">
                     <label for="nom" class="form-label">Nom de l'option</label>
                     <input type="text" class="form-control" id="nom" name="nom" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="id_categorie" class="form-label">Catégorie</label>
+                    <select class="form-select" id="id_categorie" name="id_categorie">
+                        <option value="">Sélectionner une catégorie</option>
+                        <?php foreach ($categories as $categorie): ?>
+                            <option value="<?php echo $categorie['id']; ?>">
+                                <?php echo htmlspecialchars($categorie['nom']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
                 
                 <div class="mb-3">
@@ -267,6 +280,16 @@ error_log("Types de carrosserie récupérés : " . print_r($types_carrosserie, t
     </div>
 <?php elseif ($action === 'edit' && isset($_GET['id'])): ?>
     <?php
+    // Debug : Vérifier les données dans la base de données
+    $debug_stmt = $pdo->prepare("
+        SELECT type_carrosserie, prix 
+        FROM option_vehicule_compatibilite 
+        WHERE id_option = ?
+    ");
+    $debug_stmt->execute([$_GET['id']]);
+    $debug_data = $debug_stmt->fetchAll(PDO::FETCH_ASSOC);
+    error_log("Données de la base de données pour l'option " . $_GET['id'] . ": " . print_r($debug_data, true));
+
     $stmt = $pdo->prepare("
         SELECT o.*, 
                GROUP_CONCAT(DISTINCT ovc.type_carrosserie) as types_carrosserie,
@@ -291,11 +314,16 @@ error_log("Types de carrosserie récupérés : " . print_r($types_carrosserie, t
     if ($option['types_prix']) {
         foreach (explode(',', $option['types_prix']) as $type_prix) {
             list($type, $prix) = explode(':', $type_prix);
-            $types_prix[$type] = $prix;
+            // Formater le prix avec une virgule comme séparateur décimal
+            $prix = floatval($prix);
+            $types_prix[$type] = number_format($prix, 2, ',', ' ');
         }
     }
     $option['types_prix'] = $types_prix;
     $option['images'] = $option['images'] ? explode(',', $option['images']) : [];
+
+    // Debug pour vérifier les données
+    error_log("Option data après traitement: " . print_r($option, true));
     ?>
     
     <h2>Modifier l'option</h2>
@@ -347,7 +375,14 @@ error_log("Types de carrosserie récupérés : " . print_r($types_carrosserie, t
                             <input type="text" class="form-control prix-input" 
                                    name="prix_<?php echo md5($type['type_carrosserie']); ?>" 
                                    placeholder="Prix" 
-                                   value="<?php echo isset($option['types_prix'][$type['type_carrosserie']]) ? htmlspecialchars($option['types_prix'][$type['type_carrosserie']]) : ''; ?>"
+                                   value="<?php 
+                                        $type_carrosserie = $type['type_carrosserie'];
+                                        if (isset($option['types_prix'][$type_carrosserie])) {
+                                            echo $option['types_prix'][$type_carrosserie];
+                                        } else {
+                                            echo '0,00';
+                                        }
+                                   ?>"
                                    <?php echo in_array($type['type_carrosserie'], $option['types_carrosserie']) ? '' : 'disabled'; ?>>
                             <span class="input-group-text">€</span>
                         </div>
@@ -479,7 +514,7 @@ error_log("Types de carrosserie récupérés : " . print_r($types_carrosserie, t
                                     <?php foreach ($option['types_prix'] as $type => $prix): ?>
                                         <li>
                                             <span class="fw-medium"><?= htmlspecialchars($type) ?></span>
-                                            <span class="text-success"><?= number_format($prix, 2, ',', ' ') ?> €</span>
+                                            <span class="text-success"><?= $prix ?> €</span>
                                         </li>
                                     <?php endforeach; ?>
                                 </ul>

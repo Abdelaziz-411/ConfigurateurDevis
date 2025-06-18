@@ -110,14 +110,20 @@ require '../config.php';
     // Fonction pour gérer les champs de prix
     function togglePrixInput(checkbox) {
         const prixInput = checkbox.parentElement.nextElementSibling.querySelector('.prix-input');
-        if (checkbox.checked) {
-            prixInput.disabled = false;
-            prixInput.required = true;
-            prixInput.value = '0.00';
+        if (prixInput) {
+            console.log(`togglePrixInput: Initial call for checkbox ID: ${checkbox.id}, checked: ${checkbox.checked}, current input value: ${prixInput.value}`);
+            if (checkbox.checked) {
+                prixInput.disabled = false;
+                prixInput.required = true;
+                console.log(`togglePrixInput: Checkbox ${checkbox.id} is CHECKED. Input disabled: ${prixInput.disabled}`);
+            } else {
+                prixInput.disabled = true;
+                prixInput.required = false;
+                prixInput.value = ''; // Réinitialise à vide si la case est décochée
+                console.log(`togglePrixInput: Checkbox ${checkbox.id} is UNCHECKED. Input disabled: ${prixInput.disabled}, value cleared.`);
+            }
         } else {
-            prixInput.disabled = true;
-            prixInput.required = false;
-            prixInput.value = '';
+            console.warn(`togglePrixInput: Champ de prix non trouvé pour la checkbox: ${checkbox.id}`);
         }
     }
 
