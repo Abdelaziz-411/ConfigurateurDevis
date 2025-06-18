@@ -28,8 +28,8 @@ class MYPDF extends TCPDF {
         $this->Rect(0, 0, $this->getPageWidth(), 50, 'F');
         
         // Logo et titre
-        if (file_exists('images/logo.png')) {
-            $this->Image('images/logo.png', 15, 10, 40);
+        if (file_exists('images/logo.jpeg')) {
+            $this->Image('images/logo.jpeg', 15, 10, 40);
             $this->SetX(60);
         } else {
             $this->SetX(15);

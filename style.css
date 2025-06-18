@@ -9,6 +9,10 @@
     --transition: all 0.3s ease;
 }
 
+.bg-orange {
+    background-color: #c6864a !important; /* ou la couleur orange de ton choix */
+}
+
 body {
     font-family: 'Poppins', sans-serif;
     background: var(--background-color);
@@ -45,7 +49,9 @@ body {
 
 .card:hover {
     transform: translateY(-5px);
-    box-shadow: var(--shadow);
+    background: #ecd3b0 !important; /* ou la couleur de ton choix */
+    border: none; /* optionnel : retire la bordure grise Bootstrap */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04); /* optionnel : un peu d'ombre douce */
 }
 
 .card.border-primary {
@@ -148,7 +154,7 @@ body {
 
 /* Styles pour le footer */
 footer {
-    border-top: 1px solid #e4ceae;
+    border-top: 1px solid #ecc061;
 }
 
 /* Styles pour les checkboxes */
@@ -164,7 +170,7 @@ footer {
 
 /* Styles pour les titres */
 .display-4 {
-    color: var(--primary-color);
+    color: #df9960;
     font-weight: 600;
 }
 
@@ -429,18 +435,20 @@ footer {
 }
 
 .card-img-container {
-    position: relative;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background-color: #f8f9fa;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    overflow: hidden;
 }
 
 .card-img-container img {
-    transition: transform 0.3s ease-in-out;
-}
-
-.marque-card:hover .card-img-container img,
-.modele-card:hover .card-img-container img {
-    transform: scale(1.05);
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    object-position: center;
+    display: block;
 }
 
 .card-title {
@@ -479,3 +487,61 @@ footer {
 .col-md-4:nth-child(3) .modele-card { animation-delay: 0.3s; }
 .col-md-4:nth-child(4) .marque-card,
 .col-md-4:nth-child(4) .modele-card { animation-delay: 0.4s; }
+
+/* Harmonisation orange à la place du bleu Bootstrap */
+.bg-primary {
+    background-color: #c6864a !important;
+}
+.btn-primary, .btn-primary:active, .btn-primary:focus {
+    background-color: #c6864a !important;
+    border-color: #c6864a !important;
+    color: #fff !important;
+}
+.btn-primary:hover {
+    background-color: #a96d36 !important;
+    border-color: #a96d36 !important;
+}
+.text-primary {
+    color: #c6864a !important;
+}
+.form-control:focus, .form-select:focus {
+    border-color: #c6864a !important;
+    box-shadow: 0 0 0 0.2rem rgba(198, 134, 74, 0.25) !important;
+}
+/* Pour les boutons toggle (Oui/Non) */
+.btn-primary,
+.btn-primary:active,
+.btn-primary:focus,
+.btn-primary.active,
+.btn-check:checked + .btn,
+.btn-check:active + .btn,
+.btn-check:focus + .btn,
+.btn-check:checked + .btn-primary,
+.btn-check:active + .btn-primary,
+.btn-check:focus + .btn-primary {
+    background-color: #c6864a !important;
+    border-color: #c6864a !important;
+    color: #fff !important;
+    box-shadow: 0 0 0 0.2rem rgba(198, 134, 74, 0.25) !important;
+}
+
+.btn-outline-primary,
+.btn-outline-primary:active,
+.btn-outline-primary:focus,
+.btn-outline-primary.active,
+.btn-check:checked + .btn-outline-primary,
+.btn-check:active + .btn-outline-primary,
+.btn-check:focus + .btn-outline-primary {
+    color: #c6864a !important;
+    border-color: #c6864a !important;
+    background: #fff !important;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus,
+.btn-outline-primary:active,
+.btn-outline-primary.active {
+    background-color: #c6864a !important;
+    color: #fff !important;
+    border-color: #c6864a !important;
+}

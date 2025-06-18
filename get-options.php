@@ -24,14 +24,16 @@ try {
 
     // Modified SQL query
     $sql = "SELECT o.id, o.nom, o.description, o.id_categorie,
-                   ovc.prix AS compatible_prix,
+               c.nom AS categorie_nom,
+               ovc.prix AS compatible_prix,
                GROUP_CONCAT(DISTINCT oi.image_path) as images
         FROM options o
-            INNER JOIN option_vehicule_compatibilite ovc ON o.id = ovc.id_option
+        LEFT JOIN categories_options c ON o.id_categorie = c.id
+        INNER JOIN option_vehicule_compatibilite ovc ON o.id = ovc.id_option
         LEFT JOIN option_images oi ON o.id = oi.id_option
-            WHERE ovc.type_carrosserie = ?
-            GROUP BY o.id, o.nom, o.description, o.id_categorie, compatible_prix
-            ORDER BY o.nom";
+        WHERE ovc.type_carrosserie = ?
+        GROUP BY o.id, o.nom, o.description, o.id_categorie, c.nom, compatible_prix
+        ORDER BY c.ordre, c.nom, o.nom";
     
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$type_carrosserie]);

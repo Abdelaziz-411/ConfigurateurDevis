@@ -19,9 +19,11 @@ $vehicules = $pdo->query("SELECT * FROM vehicules ORDER BY nom")->fetchAll(PDO::
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-orange">
         <div class="container">
-            <a class="navbar-brand" href="index.php">Configurateur</a>
+            <a class="navbar-brand" href="index.php">
+                <img src="images/logo.jpeg" alt="Logo entreprise" style="height:40px;">
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -276,7 +278,7 @@ $vehicules = $pdo->query("SELECT * FROM vehicules ORDER BY nom")->fetchAll(PDO::
         </div>
     </footer>
 
-    <!-- Bootstrap JS et Popper.js -->
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="script.js"></script>
 </body>

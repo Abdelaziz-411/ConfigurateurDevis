@@ -1,5 +1,6 @@
 <?php
 require 'config.php';
+require 'includes/mailer.php';
 
 header('Content-Type: application/json');
 
@@ -65,35 +66,9 @@ try {
 
     $devis_id = $pdo->lastInsertId();
 
-    // Récupérer l'email des administrateurs
-    $stmt = $pdo->query("
-        SELECT email 
-        FROM utilisateurs 
-        WHERE role = 'admin' 
-        LIMIT 1
-    ");
-    $admin = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($admin) {
-        // Envoi de l'email à l'administrateur
-        $to = $admin['email'];
-        $subject = "Nouvelle demande de devis #$devis_id";
-        $message = "Une nouvelle demande de devis a été reçue :\n\n";
-        $message .= "Nom : {$data['nom']}\n";
-        $message .= "Prénom : {$data['prenom']}\n";
-        $message .= "Email : {$data['email']}\n";
-        $message .= "Téléphone : {$data['telephone']}\n\n";
-        $message .= "Type de carrosserie : {$data['type_carrosserie']}\n";
-        $message .= "Configuration :\n{$data['configuration']}\n\n";
-        $message .= "Prix HT : {$data['prix_ht']} €\n";
-        $message .= "Prix TTC : {$data['prix_ttc']} €\n\n";
-        $message .= "Message :\n{$data['message']}\n";
-
-        $headers = "From: {$data['email']}\r\n";
-        $headers .= "Reply-To: {$data['email']}\r\n";
-        $headers .= "X-Mailer: PHP/" . phpversion();
-
-        mail($to, $subject, $message, $headers);
+    // Envoyer l'email à l'administrateur
+    if (!sendDevisEmail($devis_id)) {
+        error_log("Erreur lors de l'envoi de l'email pour le devis #$devis_id");
     }
 
     echo json_encode([

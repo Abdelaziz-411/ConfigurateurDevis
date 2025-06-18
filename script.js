@@ -121,7 +121,7 @@ async function loadOptions() {
 
         // Grouper les options par catégorie
         const optionsByCategory = options.reduce((acc, option) => {
-            const category = option.categorie || 'Sans catégorie';
+            const category = option.categorie_nom || 'Sans catégorie';
             if (!acc[category]) {
                 acc[category] = [];
             }
@@ -133,26 +133,22 @@ async function loadOptions() {
         Object.entries(optionsByCategory).forEach(([category, categoryOptions]) => {
             const categorySection = document.createElement('div');
             categorySection.className = 'category-section mb-4';
-            categorySection.innerHTML = `
-                    <h3 class="h4 mb-3">${category}</h3>
-                    <div class="row g-4">
-                    ${categoryOptions.map(option => {
-                        const optionCard = createOptionCard(option);
-                        return optionCard.outerHTML;
-                    }).join('')}
-                </div>
-            `;
+        
+            const title = document.createElement('h3');
+            title.className = 'h4 mb-3';
+            title.textContent = category;
+            categorySection.appendChild(title);
+        
+            const row = document.createElement('div');
+            row.className = 'row g-4';
+        
+            categoryOptions.forEach(option => {
+                const optionCard = createOptionCard(option);
+                row.appendChild(optionCard);
+            });
+        
+            categorySection.appendChild(row);
             optionsContainer.appendChild(categorySection);
-        });
-
-        // Réattacher les écouteurs d'événements
-        document.querySelectorAll('.select-option-btn').forEach(button => {
-            const optionId = button.dataset.optionId;
-            const optionCard = button.closest('.option-card');
-            if (optionCard) {
-                const prix = optionCard.dataset.prix;
-                button.addEventListener('click', () => selectOption(optionId, prix));
-            }
         });
 
     } catch (error) {
@@ -163,91 +159,113 @@ async function loadOptions() {
 
 // Fonction pour créer une carte d'option
 function createOptionCard(option) {
-            const col = document.createElement('div');
-            col.className = 'col-md-4 col-lg-3 mb-4';
-            
-            const card = document.createElement('div');
+    const col = document.createElement('div');
+    col.className = 'col-md-4 col-lg-3 mb-4';
+
+    const card = document.createElement('div');
     card.className = 'card h-100 option-card';
     card.dataset.id = option.id;
     card.dataset.prix = option.prix;
-    
-            const imgContainer = document.createElement('div');
-            imgContainer.className = 'card-img-container';
-            imgContainer.style.height = '200px';
-            imgContainer.style.overflow = 'hidden';
-            imgContainer.style.display = 'flex';
-            imgContainer.style.alignItems = 'center';
-            imgContainer.style.justifyContent = 'center';
-            imgContainer.style.backgroundColor = '#f8f9fa';
-            
-            const img = document.createElement('img');
-            img.className = 'card-img-top';
-    img.style.objectFit = 'cover';
-            img.style.height = '100%';
-            img.style.width = '100%';
-            
+
+    const imgContainer = document.createElement('div');
+    imgContainer.className = 'card-img-container';
+    imgContainer.style.height = '200px';
+    imgContainer.style.overflow = 'hidden';
+    imgContainer.style.display = 'flex';
+    imgContainer.style.alignItems = 'center';
+    imgContainer.style.justifyContent = 'center';
+    imgContainer.style.backgroundColor = '#f8f9fa';
+
+    const img = document.createElement('img');
+    img.className = 'card-img-top';
+    img.style.objectFit = 'contain';
+    img.style.maxWidth = '100%';
+    img.style.maxHeight = '100%';
+    img.style.height = 'auto';
+    img.style.width = 'auto';
+    img.style.display = 'block';
+    img.style.margin = '0 auto';
+
     if (option.images && option.images.length > 0) {
         img.src = option.images[0];
-            } else {
+    } else {
         img.src = 'images/options/default-option.png';
-            }
-            
-            imgContainer.appendChild(img);
-            
-            const cardBody = document.createElement('div');
-            cardBody.className = 'card-body text-center';
-            
-            const title = document.createElement('h5');
-            title.className = 'card-title';
+    }
+
+    imgContainer.appendChild(img);
+
+    const cardBody = document.createElement('div');
+    cardBody.className = 'card-body text-center';
+
+    const title = document.createElement('h5');
+    title.className = 'card-title';
     title.textContent = option.nom;
-    
+
     const price = document.createElement('p');
     price.className = 'card-text';
     price.textContent = `Prix HT : ${formatPrix(option.prix, false)}`;
-    
+
+    // BOUTON DETAILS
+    const detailsButton = document.createElement('button');
+    detailsButton.className = 'btn btn-primary mt-2';
+    detailsButton.textContent = 'Voir détails';
+    detailsButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        console.log('Voir détails option', option); // DEBUG
+        showDetailsModal(option);
+    });
+
+    // BOUTON SELECTIONNER
     const selectButton = document.createElement('button');
-    selectButton.className = 'btn btn-primary mt-2 select-option-btn';
+    selectButton.className = 'btn btn-primary mt-2 select-option-btn ms-2';
     selectButton.dataset.optionId = option.id;
     selectButton.textContent = 'Sélectionner';
     selectButton.addEventListener('click', (e) => {
         e.stopPropagation();
         selectOption(option.id, option.prix);
     });
-            
-            cardBody.appendChild(title);
+
+    // ORDRE D'AJOUT
+    cardBody.appendChild(title);
     cardBody.appendChild(price);
+    cardBody.appendChild(detailsButton);
     cardBody.appendChild(selectButton);
-            card.appendChild(imgContainer);
-            card.appendChild(cardBody);
-            col.appendChild(card);
-    
+
+    card.appendChild(imgContainer);
+    card.appendChild(cardBody);
+    col.appendChild(card);
+
     return col;
 }
 
 // Fonction pour créer une carte de kit
 function createKitCard(kit) {
     const col = document.createElement('div');
-        col.className = 'col-md-4 col-lg-3 mb-4';
+    col.className = 'col-md-4 col-lg-3 mb-4';
     
     const card = document.createElement('div');
     card.className = 'card h-100 kit-card';
     card.dataset.id = kit.id;
     card.dataset.prix = kit.prix;
         
-        const imgContainer = document.createElement('div');
-        imgContainer.className = 'card-img-container';
-        imgContainer.style.height = '200px';
-        imgContainer.style.overflow = 'hidden';
-        imgContainer.style.display = 'flex';
-        imgContainer.style.alignItems = 'center';
-        imgContainer.style.justifyContent = 'center';
-        imgContainer.style.backgroundColor = '#f8f9fa';
+    const imgContainer = document.createElement('div');
+    imgContainer.className = 'card-img-container';
+    imgContainer.style.height = '200px';
+    imgContainer.style.overflow = 'hidden';
+    imgContainer.style.display = 'flex';
+    imgContainer.style.alignItems = 'center';
+    imgContainer.style.justifyContent = 'center';
+    imgContainer.style.backgroundColor = '#f8f9fa';
         
-        const img = document.createElement('img');
-        img.className = 'card-img-top';
-    img.style.objectFit = 'cover';
-        img.style.height = '100%';
-        img.style.width = '100%';
+    const img = document.createElement('img');
+    img.className = 'card-img-top';
+    img.style.objectFit = 'contain';
+    img.style.maxWidth = '100%';
+    img.style.maxHeight = '100%';
+    img.style.height = 'auto';
+    img.style.width = 'auto';
+    img.style.display = 'block';
+    img.style.margin = '0 auto';
     
     if (kit.images && kit.images.length > 0) {
         img.src = kit.images[0];
@@ -255,21 +273,30 @@ function createKitCard(kit) {
         img.src = 'images/kits/default-kit.png';
     }
         
-        imgContainer.appendChild(img);
+    imgContainer.appendChild(img);
         
-        const cardBody = document.createElement('div');
-        cardBody.className = 'card-body text-center';
+    const cardBody = document.createElement('div');
+    cardBody.className = 'card-body text-center';
         
-        const title = document.createElement('h5');
-        title.className = 'card-title';
+    const title = document.createElement('h5');
+    title.className = 'card-title';
     title.textContent = kit.nom;
     
     const price = document.createElement('p');
     price.className = 'card-text';
     price.textContent = `Prix HT : ${formatPrix(kit.prix, false)}`;
+
+    const detailsButton = document.createElement('button');
+    detailsButton.className = 'btn btn-primary mt-2';
+    detailsButton.textContent = 'Voir détails';
+    detailsButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        console.log('Voir détails kit:', kit); // Debug
+        showDetailsModal(kit);
+    });
     
     const selectButton = document.createElement('button');
-    selectButton.className = 'btn btn-primary mt-2 select-kit-btn';
+    selectButton.className = 'btn btn-primary mt-2 select-kit-btn ms-2';
     selectButton.dataset.kitId = kit.id;
     selectButton.textContent = 'Sélectionner';
     selectButton.addEventListener('click', (e) => {
@@ -277,14 +304,115 @@ function createKitCard(kit) {
         selectKit(kit.id, kit.prix);
     });
         
-        cardBody.appendChild(title);
+    // ORDRE D'AJOUT CORRIGÉ
+    cardBody.appendChild(title);
     cardBody.appendChild(price);
+    cardBody.appendChild(detailsButton);
     cardBody.appendChild(selectButton);
-        card.appendChild(imgContainer);
-        card.appendChild(cardBody);
+        
+    card.appendChild(imgContainer);
+    card.appendChild(cardBody);
     col.appendChild(card);
     
     return col;
+}
+
+// Fonction pour afficher la modale de détails
+function showDetailsModal(item) {
+    console.log('showDetailsModal appelé avec:', item); // Debug
+
+    // Vérifier si une modale existe déjà et la supprimer
+    const existingModal = document.querySelector('.modal');
+    if (existingModal) {
+        const existingBsModal = bootstrap.Modal.getInstance(existingModal);
+        if (existingBsModal) {
+            existingBsModal.dispose();
+        }
+        existingModal.remove();
+    }
+
+    // Créer la modale
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.id = 'detailsModal';
+    modal.tabIndex = -1;
+    modal.setAttribute('aria-labelledby', 'detailsModalLabel');
+    
+    modal.innerHTML = `
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content rounded-4 shadow-lg">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-primary" id="detailsModalLabel">${item.nom}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-4">
+                        ${item.images && item.images.length > 0 ? `
+                            <div class="col-md-6">
+                                <div id="carouselDetails" class="carousel slide bg-light rounded-3 overflow-hidden" data-bs-ride="carousel" style="height: 400px; display: flex; align-items: center; justify-content: center;">
+                                    <div class="carousel-inner" style="height: 100%;">
+                                        ${item.images.map((image, index) => `
+                                            <div class="carousel-item ${index === 0 ? 'active' : ''}" style="height: 100%; display: flex; align-items: center; justify-content: center;">
+                                                <img src="${image}" class="d-block rounded-3" style="width: 100%; height: 100%; object-fit: cover;">
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    ${item.images.length > 1 ? `
+                                        <button class="carousel-control-prev" type="button" data-bs-target="#carouselDetails" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Précédent</span>
+                    </button>
+                                        <button class="carousel-control-next" type="button" data-bs-target="#carouselDetails" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Suivant</span>
+                    </button>
+                ` : ''}
+            </div>
+            </div>
+                        ` : ''}
+                        
+                        <div class="${item.images && item.images.length > 0 ? 'col-md-6' : 'col-12'}">
+                            <h6 class="fw-bold mb-3 text-secondary">Description :</h6>
+                            <p class="text-muted lead-sm">${item.description ? item.description : 'Aucune description disponible pour cet élément.'}</p>
+                            
+                            ${item.prix ? `
+                                <h6 class="fw-bold mt-4 text-secondary">Prix :</h6>
+                                <p class="h5 text-primary">${formatPrix(item.prix, false)}</p>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 justify-content-end">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Ajouter la modale au DOM
+    document.body.appendChild(modal);
+
+    // Initialiser la modale avec Bootstrap
+    const bsModal = new bootstrap.Modal(modal, {
+        keyboard: true,
+        backdrop: true
+    });
+
+    // Afficher la modale
+    bsModal.show();
+
+    // Nettoyage après fermeture
+    modal.addEventListener('hidden.bs.modal', () => {
+        bsModal.dispose();
+        modal.remove();
+    });
+
+    // Gestion de la touche Escape
+    modal.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            bsModal.hide();
+        }
+    });
 }
 
 // Fonction pour valider la sélection du véhicule
@@ -991,8 +1119,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Gestionnaire d'événements pour le bouton "Demander un devis"
     document.getElementById('btnDemandeDevis').addEventListener('click', function() {
-        const devisModal = new bootstrap.Modal(document.getElementById('devisModal'));
-        devisModal.show();
+        const modalElement = document.getElementById('devisModal');
+        if (modalElement) {
+            const modal = new bootstrap.Modal(modalElement, {
+                backdrop: 'static',
+                keyboard: false
+            });
+            modal.show();
+        } else {
+            console.error('Modal element not found');
+        }
     });
 
     // Gestionnaire d'événements pour le bouton "Réinitialiser"
