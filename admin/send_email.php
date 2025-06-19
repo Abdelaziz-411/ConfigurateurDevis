@@ -17,8 +17,8 @@ function sendDevisEmail($devis_id) {
     $stmt = $pdo->prepare("
         SELECT d.*, v.nom as vehicule_nom, k.nom as kit_nom
         FROM devis d
-        LEFT JOIN vehicules v ON d.vehicule_id = v.id
-        LEFT JOIN kits k ON d.kit_id = k.id
+        LEFT JOIN vehicules v ON d.id_vehicule = v.id
+        LEFT JOIN kits k ON d.id_kit = k.id
         WHERE d.id = ?
     ");
     $stmt->execute([$devis_id]);

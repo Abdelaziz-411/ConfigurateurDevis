@@ -8,6 +8,7 @@ let selectedTypeCarrosserie = null; // Nouvelle variable pour stocker le type de
 let kitPrix = 0;
 const TVA = 0.20; // TVA à 20%
 let selectedMarqueId = null; // Nouvelle variable pour stocker l'ID de la marque sélectionnée
+let selectedModeleId = null; // Variable pour stocker l'ID du modèle sélectionné
 
 // Fonction pour calculer le prix HT à partir du prix TTC
 function calculerPrixHT(prixTTC) {
@@ -477,19 +478,28 @@ function validerSelectionVehicule() {
 
 // Fonction pour afficher le formulaire de sélection du véhicule
 function showVehicleSelection(hasVehicleValue) {
+    console.log('showVehicleSelection appelée avec:', hasVehicleValue);
     hasVehicle = hasVehicleValue;
     document.getElementById('vehicle-selection-form').style.display = 'none';
     document.getElementById('existing-vehicle-selection').style.display = 'block';
+    console.log('Chargement des marques...');
     loadMarques();
 }
 
 // Charger les marques depuis le serveur
 async function loadMarques() {
     try {
+        console.log('Chargement des marques...');
         const response = await fetch('get-marques-modeles.php?action=get_marques');
         const marques = await response.json();
+        console.log('Marques reçues:', marques);
         
         const marquesList = document.getElementById('marques-list');
+        if (!marquesList) {
+            console.error('Élément marques-list non trouvé');
+            return;
+        }
+        
         marquesList.innerHTML = '';
         
         marques.forEach(marque => {
@@ -542,8 +552,10 @@ async function loadMarques() {
             // Ajouter l'événement de clic sur la carte
             card.addEventListener('click', function() {
                 const idMarque = this.dataset.marqueId;
+                console.log('Marque cliquée:', idMarque);
                 if (idMarque) {
                     selectedMarqueId = idMarque;
+                    console.log('Chargement des modèles pour la marque:', idMarque);
                     loadModeles(idMarque);
                     document.getElementById('modeles-title').style.display = 'block';
                     document.getElementById('marques-list').style.display = 'none';
@@ -599,6 +611,8 @@ async function loadMarques() {
             document.getElementById('modeles-title').style.display = 'none';
         });
         
+        console.log('Marques chargées avec succès');
+        
     } catch (error) {
         console.error('Erreur lors du chargement des marques:', error);
     }
@@ -607,11 +621,27 @@ async function loadMarques() {
 // Charger les modèles en fonction de la marque sélectionnée
 async function loadModeles(idMarque) {
     try {
+        console.log('Chargement des modèles pour la marque:', idMarque);
         const response = await fetch(`get-marques-modeles.php?action=get_modeles&id_marque=${idMarque}`);
         const modeles = await response.json();
+        console.log('Modèles reçus:', modeles);
         
         const modelesList = document.getElementById('modeles-list');
+        if (!modelesList) {
+            console.error('Élément modeles-list non trouvé');
+            return;
+        }
+        
+        const modelesTitle = document.getElementById('modeles-title');
+        if (!modelesTitle) {
+            console.error('Élément modeles-title non trouvé');
+            return;
+        }
+        
+        console.log('Affichage des modèles...');
         modelesList.innerHTML = '';
+        modelesList.style.display = 'block';
+        modelesTitle.style.display = 'block';
         
         modeles.forEach(modele => {
             const col = document.createElement('div');
@@ -675,10 +705,9 @@ async function loadModeles(idMarque) {
             // Ajouter l'événement de clic sur la carte
             card.addEventListener('click', function() {
                 const idModele = this.dataset.modeleId;
+                console.log('Modèle cliqué:', idModele);
                 if (idModele) {
                     selectedModeleId = idModele;
-                    document.getElementById('modeles-list').style.display = 'none';
-                    document.getElementById('modeles-title').style.display = 'none';
                     
                     // Find the actual model object to get its name
                     const clickedModele = modeles.find(m => m.id == idModele);
@@ -695,6 +724,10 @@ async function loadModeles(idMarque) {
                         selectedVehicule = { id: idModele, nom: 'Modèle non spécifié', type_carrosserie: null, annee: null };
                         console.log('loadModeles: selectedVehicule initialisé avec erreur pour modèle existant:', selectedVehicule);
                     }
+                    
+                    // Masquer la liste des modèles et afficher le formulaire de type de carrosserie
+                    document.getElementById('modeles-list').style.display = 'none';
+                    document.getElementById('modeles-title').style.display = 'none';
                     
                     // This section creates the dynamic form for type de carrosserie and year.
                     const typeCarrosserieContainer = document.createElement('div');
@@ -798,6 +831,8 @@ async function loadModeles(idMarque) {
             // Show the custom vehicle form
             document.getElementById('vehicle-selection-form').style.display = 'block';
         });
+        
+        console.log('Modèles chargés avec succès');
         
     } catch (error) {
         console.error('Erreur lors du chargement des modèles:', error);
@@ -1136,24 +1171,53 @@ document.addEventListener('DOMContentLoaded', function() {
         if (confirm('Êtes-vous sûr de vouloir réinitialiser la configuration ? Toutes les sélections seront effacées.')) {
             // Réinitialiser les variables globales
             selectedVehicule = null;
-                selectedKit = null;
-                selectedOptions = new Set();
+            selectedKit = null;
+            selectedOptions = new Set();
             total = 0;
             hasVehicle = null;
             selectedTypeCarrosserie = null;
             selectedMarqueId = null;
+            selectedModeleId = null;
 
             // Effacer le localStorage
             localStorage.removeItem('configurateur-state');
 
-            // Réinitialiser l'interface utilisateur
-            const initialVehicleSelection = document.getElementById('initial-vehicle-selection');
+            // Réinitialiser complètement l'interface utilisateur
+            const stepVehicule = document.getElementById('step-vehicule');
             const existingVehicleSelection = document.getElementById('existing-vehicle-selection');
             const vehicleForm = document.getElementById('vehicle-selection-form');
             const configurateurDiv = document.getElementById('configurateur');
 
-            if (initialVehicleSelection) initialVehicleSelection.style.display = 'block';
-            if (existingVehicleSelection) existingVehicleSelection.style.display = 'none';
+            // Remettre l'interface dans son état initial
+            if (stepVehicule) {
+                stepVehicule.style.display = 'block';
+                // Remettre les boutons Oui/Non visibles
+                const btnExistingVehicle = document.getElementById('btnExistingVehicle');
+                const btnNewVehicle = document.getElementById('btnNewVehicle');
+                if (btnExistingVehicle) btnExistingVehicle.style.display = 'inline-block';
+                if (btnNewVehicle) btnNewVehicle.style.display = 'inline-block';
+            }
+            
+            if (existingVehicleSelection) {
+                existingVehicleSelection.style.display = 'none';
+                // Vider et remettre en place les listes
+                const marquesList = document.getElementById('marques-list');
+                const modelesList = document.getElementById('modeles-list');
+                const modelesTitle = document.getElementById('modeles-title');
+                
+                if (marquesList) {
+                    marquesList.innerHTML = '';
+                    marquesList.style.display = 'block';
+                }
+                if (modelesList) {
+                    modelesList.innerHTML = '';
+                    modelesList.style.display = 'none';
+                }
+                if (modelesTitle) {
+                    modelesTitle.style.display = 'none';
+                }
+            }
+            
             if (vehicleForm) vehicleForm.style.display = 'none';
             if (configurateurDiv) configurateurDiv.style.display = 'none';
 
@@ -1166,8 +1230,19 @@ document.addEventListener('DOMContentLoaded', function() {
             if (stepOptions) stepOptions.classList.remove('is-visible');
             if (recap) recap.classList.remove('is-visible');
 
-            // Réinitialiser le contenu du récapitulatif (appeler updateRecap pour re-générer l'état initial)
+            // Supprimer les éléments dynamiques créés lors de la sélection
+            const typeCarrosserieContainer = document.querySelector('.col-md-4.mx-auto.mt-4');
+            if (typeCarrosserieContainer) {
+                typeCarrosserieContainer.remove();
+            }
+
+            // Réinitialiser le contenu du récapitulatif
             updateRecap();
+            
+            // S'assurer que l'interface est bien réinitialisée en ajoutant un petit délai
+            setTimeout(() => {
+                console.log('Réinitialisation terminée, interface remise à zéro');
+            }, 100);
         }
     });
             
@@ -1262,31 +1337,49 @@ document.addEventListener('DOMContentLoaded', function() {
 
             try {
                 console.log("Tentative d'envoi des données au serveur...");
-            const response = await fetch('save-devis.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                const response = await fetch('save-devis.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify(data)
                 });
 
-                console.log('Réponse brute du serveur:', response);
-                const result = await response.json();
+                const text = await response.text();
+                console.log('Réponse texte brute du serveur:', text);
+                let result;
+                try {
+                    result = JSON.parse(text);
+                } catch (jsonError) {
+                    console.error('Erreur lors du parsing JSON:', jsonError, 'Réponse brute:', text);
+                    alert("Réponse inattendue du serveur. Veuillez vérifier la console ou contacter l'administrateur.");
+                    return;
+                }
                 console.log('Données de la réponse:', result);
-                
+
                 if (result.success) {
                     console.log("Succès de l'envoi");
                     alert("Votre demande de devis a été envoyée avec succès !");
-                    const devisModal = bootstrap.Modal.getInstance(document.getElementById('devisModal'));
-                    if (devisModal) devisModal.hide();
-                formDevis.reset();
+                    const modalElement = document.getElementById('devisModal');
+                    if (modalElement) {
+                        const devisModal = bootstrap.Modal.getInstance(modalElement);
+                        if (devisModal) devisModal.hide();
+                    } else {
+                        console.warn('Modal element not found');
+                    }
+                    formDevis.reset();
                     formDevis.classList.remove('was-validated');
                     document.getElementById('btnResetConfig').click();
-            } else {
-                    console.error('Erreur du serveur:', result);
-                    alert("Erreur lors de l'envoi de votre demande de devis: " + (result.message || "Erreur inconnue"));
-            }
-        } catch (error) {
+                } else {
+                    // Si le mail a été envoyé malgré une erreur HTTP, on affiche quand même le succès
+                    if (result.message && result.message.includes('mail') && result.message.includes('envoy')) {
+                        alert("Votre demande de devis a été envoyée avec succès (mail envoyé, mais une erreur mineure a été détectée).");
+                    } else {
+                        console.error('Erreur du serveur:', result);
+                        alert("Erreur lors de l'envoi de votre demande de devis: " + (result.message || "Erreur inconnue"));
+                    }
+                }
+            } catch (error) {
                 console.error("Erreur détaillée:", error);
                 alert("Une erreur est survenue lors de l'envoi de votre demande. Veuillez réessayer.");
             }
@@ -1321,4 +1414,39 @@ function selectOption(optionId, prix) {
     
     updateRecap();
     saveConfiguration(); // Remettre l'appel ici
+}
+
+// Fonction pour réinitialiser la sélection de véhicule (appelée depuis le HTML)
+function resetVehicleSelection() {
+    // Réinitialiser les variables liées au véhicule
+    selectedVehicule = null;
+    selectedModeleId = null;
+    selectedMarqueId = null;
+    selectedTypeCarrosserie = null;
+    
+    // Masquer la sélection de modèles et afficher la sélection de marques
+    const marquesList = document.getElementById('marques-list');
+    const modelesList = document.getElementById('modeles-list');
+    const modelesTitle = document.getElementById('modeles-title');
+    
+    if (marquesList) {
+        marquesList.style.display = 'block';
+        marquesList.innerHTML = '';
+    }
+    if (modelesList) {
+        modelesList.style.display = 'none';
+        modelesList.innerHTML = '';
+    }
+    if (modelesTitle) {
+        modelesTitle.style.display = 'none';
+    }
+    
+    // Supprimer les éléments dynamiques créés lors de la sélection
+    const typeCarrosserieContainer = document.querySelector('.col-md-4.mx-auto.mt-4');
+    if (typeCarrosserieContainer) {
+        typeCarrosserieContainer.remove();
+    }
+    
+    // Recharger les marques
+    loadMarques();
 }

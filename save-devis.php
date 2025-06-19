@@ -45,7 +45,7 @@ try {
             prix_ht, prix_ttc, statut
         ) VALUES (
             :nom, :prenom, :email, :telephone, :message,
-            :vehicule_id, :kit_id, :type_carrosserie, :configuration,
+            :vehicule_id, :id_kit, :type_carrosserie, :configuration,
             :prix_ht, :prix_ttc, 'nouveau'
         )
     ");
@@ -57,7 +57,7 @@ try {
         'telephone' => $data['telephone'],
         'message' => $data['message'] ?? '',
         'vehicule_id' => $data['vehicule_id'],
-        'kit_id' => $data['kit_id'] ?? null,
+        'id_kit' => $data['kit_id'] ?? null,
         'type_carrosserie' => $data['type_carrosserie'],
         'configuration' => $data['configuration'],
         'prix_ht' => $data['prix_ht'],
