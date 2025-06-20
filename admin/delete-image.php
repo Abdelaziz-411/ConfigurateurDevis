@@ -10,7 +10,7 @@ try {
     $tables = [
         'modele' => [
             'table' => 'modele_images',
-            'id_col' => 'id',
+            'id_col' => 'id_modele',
             'img_col' => 'image_path',
             'folder' => '../images/modeles/'
         ],
@@ -23,7 +23,7 @@ try {
         'kit' => [
             'table' => 'kit_images',
             'id_col' => 'id_kit',
-            'img_col' => 'filename',
+            'img_col' => 'image_path',
             'folder' => '../images/kits/'
         ]
     ];
@@ -38,17 +38,18 @@ try {
     $img_col = $tables[$type]['img_col'];
     $folder = $tables[$type]['folder'];
 
-    if ($type === 'modele' && $id) {
-        $stmt = $pdo->prepare("SELECT $img_col FROM $table WHERE $id_col = ?");
-        $stmt->execute([$id]);
+    if ($type === 'modele' && $id && $image) {
+        // Suppression par id_modele ET nom de fichier
+        $stmt = $pdo->prepare("SELECT $img_col FROM $table WHERE $id_col = ? AND $img_col = ?");
+        $stmt->execute([$id, $image]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) {
             $path = $folder . $row[$img_col];
             if (file_exists($path)) {
                 unlink($path);
             }
-            $stmt = $pdo->prepare("DELETE FROM $table WHERE $id_col = ?");
-            $stmt->execute([$id]);
+            $stmt = $pdo->prepare("DELETE FROM $table WHERE $id_col = ? AND $img_col = ?");
+            $stmt->execute([$id, $image]);
             echo json_encode(['success' => true]);
             exit;
         } else {

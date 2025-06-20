@@ -1,7 +1,7 @@
 <?php
 // Récupérer les données du modèle
 $stmt = $pdo->prepare("SELECT m.*, 
-                          GROUP_CONCAT(mi.image_path) as images,
+                          GROUP_CONCAT(DISTINCT mi.image_path) as images,
                           GROUP_CONCAT(ms.statut) as statuts -- Récupérer les statuts associés
                           FROM modeles m
                           LEFT JOIN modele_images mi ON m.id = mi.id_modele

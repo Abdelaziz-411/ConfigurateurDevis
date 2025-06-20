@@ -329,7 +329,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </a>
                                 <button type="button" 
                                         class="btn btn-sm btn-danger" 
-                                        onclick="deleteKit(<?php echo $kit['id']; ?>)">
+                                        <button class="delete-image" data-id="<?php echo $kit['id']; ?>" data-image="<?php echo htmlspecialchars($image); ?>">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </div>
@@ -517,30 +517,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     <script>
     // Fonction pour supprimer une image
+    // Fonction pour supprimer une image d'un kit
     document.querySelectorAll('.delete-image').forEach(button => {
         button.addEventListener('click', function() {
             if (confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) {
                 const id = this.dataset.id;
                 const image = this.dataset.image;
-                
+                // On encode toujours les variables pour éviter les soucis de caractères spéciaux
                 fetch('delete-image.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
-                    body: `id=${id}&image=${image}&type=kit`
+                    body: `id=${encodeURIComponent(id)}&image=${encodeURIComponent(image)}&type=kit`
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        // On supprime l'élément visuel correspondant
                         this.closest('.col-auto').remove();
                     } else {
-                        alert('Erreur lors de la suppression de l'image');
+                        alert('Erreur lors de la suppression de l\'image : ' + data.message);
                     }
                 })
                 .catch(error => {
                     console.error('Erreur:', error);
-                    alert('Erreur lors de la suppression de l'image');
+                    alert('Erreur lors de la suppression de l\'image');
                 });
             }
         });
