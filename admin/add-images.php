@@ -62,8 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['kit_id'])) {
             
             <div class="form-group">
                 <label for="images">Sélectionner les images :</label>
-                <input type="file" name="images[]" id="images" multiple accept="image/*" required>
-                <small class="form-text">Formats acceptés : JPG, PNG, GIF. Taille maximale : 5MB par image.</small>
+                <input type="file" name="images[]" id="images" multiple accept="image/jpeg,image/png,image/gif,image/webp,image/avif" required>
+                <small class="form-text">Formats acceptés : JPG, PNG, GIF, WebP, AVIF. Taille maximale : 5MB par image.</small>
             </div>
             
             <button type="submit" class="btn btn-success">Ajouter les images</button>

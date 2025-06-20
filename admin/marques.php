@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const imageName = this.dataset.image; // Assurez-vous d'avoir cette donnée dans le HTML
             
             if (confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) {
-                fetch('delete_image.php', {
+                fetch('delete-image.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded', // Utiliser ce type pour le formulaire URL encodé

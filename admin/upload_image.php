@@ -19,7 +19,7 @@ $id = (int)$_POST['id'];
 $file = $_FILES['image'];
 
 // Vérification du type de fichier
-$allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+$allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'];
 if (!in_array($file['type'], $allowed_types)) {
     echo json_encode(['success' => false, 'message' => 'Type de fichier non autorisé']);
     exit;

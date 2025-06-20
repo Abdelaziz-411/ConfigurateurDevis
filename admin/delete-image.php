@@ -1,45 +1,82 @@
 <?php
-require 'header.php';
-require 'check_auth.php';
-
+require_once '../config.php';
 header('Content-Type: application/json');
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['success' => false, 'message' => 'Méthode non autorisée']);
+try {
+    $type = $_POST['type'] ?? 'modele';
+    $id = $_POST['id'] ?? null;
+    $image = $_POST['image'] ?? null;
+
+    $tables = [
+        'modele' => [
+            'table' => 'modele_images',
+            'id_col' => 'id',
+            'img_col' => 'image_path',
+            'folder' => '../images/modeles/'
+        ],
+        'option' => [
+            'table' => 'option_images',
+            'id_col' => 'id_option',
+            'img_col' => 'image_path',
+            'folder' => '../images/options/'
+        ],
+        'kit' => [
+            'table' => 'kit_images',
+            'id_col' => 'id_kit',
+            'img_col' => 'filename',
+            'folder' => '../images/kits/'
+        ]
+    ];
+
+    if (!isset($tables[$type])) {
+        echo json_encode(['success' => false, 'message' => 'Type invalide']);
+        exit;
+    }
+
+    $table = $tables[$type]['table'];
+    $id_col = $tables[$type]['id_col'];
+    $img_col = $tables[$type]['img_col'];
+    $folder = $tables[$type]['folder'];
+
+    if ($type === 'modele' && $id) {
+        $stmt = $pdo->prepare("SELECT $img_col FROM $table WHERE $id_col = ?");
+        $stmt->execute([$id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $path = $folder . $row[$img_col];
+            if (file_exists($path)) {
+                unlink($path);
+            }
+            $stmt = $pdo->prepare("DELETE FROM $table WHERE $id_col = ?");
+            $stmt->execute([$id]);
+            echo json_encode(['success' => true]);
+            exit;
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Image non trouvée']);
+            exit;
+        }
+    } elseif ($image && $id) {
+        $stmt = $pdo->prepare("SELECT $img_col FROM $table WHERE $id_col = ? AND $img_col = ?");
+        $stmt->execute([$id, $image]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $path = $folder . $row[$img_col];
+            if (file_exists($path)) {
+                unlink($path);
+            }
+            $stmt = $pdo->prepare("DELETE FROM $table WHERE $id_col = ? AND $img_col = ?");
+            $stmt->execute([$id, $image]);
+            echo json_encode(['success' => true]);
+            exit;
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Image non trouvée']);
+            exit;
+        }
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Paramètres manquants']);
+        exit;
+    }
+} catch (Throwable $e) {
+    echo json_encode(['success' => false, 'message' => 'Erreur serveur : ' . $e->getMessage()]);
     exit;
 }
-
-try {
-    $data = json_decode(file_get_contents('php://input'), true);
-    $id = $data['id'] ?? null;
-    $type = $data['type'] ?? null;
-
-    if (!$id || !$type) {
-        throw new Exception('Données manquantes');
-    }
-
-    // Récupérer le chemin de l'image
-    $table = $type === 'kit' ? 'kit_images' : 'option_images';
-    $stmt = $pdo->prepare("SELECT image_path FROM $table WHERE id = ?");
-    $stmt->execute([$id]);
-    $image_path = $stmt->fetchColumn();
-
-    if ($image_path) {
-        // Supprimer le fichier physique
-        $path = "../images/$type" . "s/" . $image_path;
-        if (file_exists($path)) {
-            unlink($path);
-        }
-
-        // Supprimer l'entrée de la base de données
-        $stmt = $pdo->prepare("DELETE FROM $table WHERE id = ?");
-        $stmt->execute([$id]);
-
-        echo json_encode(['success' => true]);
-    } else {
-        throw new Exception('Image non trouvée');
-    }
-
-} catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-} 

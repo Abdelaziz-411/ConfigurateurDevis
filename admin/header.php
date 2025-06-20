@@ -166,7 +166,7 @@ require '../config.php';
                     const id = this.dataset.id;
                     const type = this.dataset.type;
                     
-                    fetch('delete_image.php', {
+                    fetch('delete-image.php', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',

@@ -56,7 +56,7 @@
 
                 <div class="mb-3">
                     <label for="images" class="form-label">Images</label>
-                    <input type="file" class="form-control" id="images" name="images[]" multiple accept="image/*" onchange="previewImages(this)">
+                    <input type="file" class="form-control" id="images" name="images[]" multiple accept="image/jpeg,image/png,image/gif,image/webp,image/avif" onchange="previewImages(this)">
                     <div id="imagePreview" class="mt-2"></div>
                 </div>
 

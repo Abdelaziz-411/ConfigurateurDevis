@@ -545,3 +545,16 @@ footer {
     color: #fff !important;
     border-color: #c6864a !important;
 }
+
+/* Suppression de tout style flex horizontal sur #marques-list et #modeles-list */
+#marques-list, #modeles-list {
+    flex-wrap: wrap;
+    gap: 0;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+/* Optionnel : pour garantir que les cartes prennent toute la hauteur de la colonne */
+.marque-card, .modele-card {
+    height: 100%;
+}

@@ -350,11 +350,11 @@ function showDetailsModal(item) {
                     <div class="row g-4">
                         ${item.images && item.images.length > 0 ? `
                             <div class="col-md-6">
-                                <div id="carouselDetails" class="carousel slide bg-light rounded-3 overflow-hidden" data-bs-ride="carousel" style="height: 400px; display: flex; align-items: center; justify-content: center;">
+                            <div id="carouselDetails" class="carousel slide bg-light rounded-3 overflow-hidden" data-bs-ride="carousel" style="height: 400px;">
                                     <div class="carousel-inner" style="height: 100%;">
                                         ${item.images.map((image, index) => `
-                                            <div class="carousel-item ${index === 0 ? 'active' : ''}" style="height: 100%; display: flex; align-items: center; justify-content: center;">
-                                                <img src="${image}" class="d-block rounded-3" style="width: 100%; height: 100%; object-fit: cover;">
+                                        <div class="carousel-item${index === 0 ? ' active' : ''}" style="height: 400px;">
+                                            <img src="${image}" class="d-block w-100 h-100 rounded-3" style="object-fit: contain;" alt="Image ${index + 1}">
                                             </div>
                                         `).join('')}
                                     </div>
@@ -371,11 +371,9 @@ function showDetailsModal(item) {
             </div>
             </div>
                         ` : ''}
-                        
                         <div class="${item.images && item.images.length > 0 ? 'col-md-6' : 'col-12'}">
                             <h6 class="fw-bold mb-3 text-secondary">Description :</h6>
                             <p class="text-muted lead-sm">${item.description ? item.description : 'Aucune description disponible pour cet élément.'}</p>
-                            
                             ${item.prix ? `
                                 <h6 class="fw-bold mt-4 text-secondary">Prix :</h6>
                                 <p class="h5 text-primary">${formatPrix(item.prix, false)}</p>
@@ -631,6 +629,10 @@ async function loadModeles(idMarque) {
             console.error('Élément modeles-list non trouvé');
             return;
         }
+        // S'assurer que la classe 'row' est présente
+        modelesList.classList.add('row');
+        // Supprimer toutes les classes qui pourraient casser la grille
+        modelesList.classList.remove('d-flex', 'flex-column', 'flex-row');
         
         const modelesTitle = document.getElementById('modeles-title');
         if (!modelesTitle) {
@@ -639,10 +641,9 @@ async function loadModeles(idMarque) {
         }
         
         console.log('Affichage des modèles...');
+        // Nettoyer le conteneur sans toucher à la classe row
         modelesList.innerHTML = '';
-        modelesList.style.display = 'block';
-        modelesTitle.style.display = 'block';
-        
+        // Ajout des colonnes directement dans modelesList
         modeles.forEach(modele => {
             const col = document.createElement('div');
             col.className = 'col-md-4 col-lg-3 mb-4';
@@ -1337,11 +1338,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             try {
                 console.log("Tentative d'envoi des données au serveur...");
-                const response = await fetch('save-devis.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+            const response = await fetch('save-devis.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
                     body: JSON.stringify(data)
                 });
 
@@ -1356,7 +1357,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 console.log('Données de la réponse:', result);
-
+                
                 if (result.success) {
                     console.log("Succès de l'envoi");
                     alert("Votre demande de devis a été envoyée avec succès !");
@@ -1367,19 +1368,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         console.warn('Modal element not found');
                     }
-                    formDevis.reset();
+                formDevis.reset();
                     formDevis.classList.remove('was-validated');
                     document.getElementById('btnResetConfig').click();
                 } else {
                     // Si le mail a été envoyé malgré une erreur HTTP, on affiche quand même le succès
                     if (result.message && result.message.includes('mail') && result.message.includes('envoy')) {
                         alert("Votre demande de devis a été envoyée avec succès (mail envoyé, mais une erreur mineure a été détectée).");
-                    } else {
-                        console.error('Erreur du serveur:', result);
-                        alert("Erreur lors de l'envoi de votre demande de devis: " + (result.message || "Erreur inconnue"));
+            } else {
+                    console.error('Erreur du serveur:', result);
+                    alert("Erreur lors de l'envoi de votre demande de devis: " + (result.message || "Erreur inconnue"));
                     }
-                }
-            } catch (error) {
+            }
+        } catch (error) {
                 console.error("Erreur détaillée:", error);
                 alert("Une erreur est survenue lors de l'envoi de votre demande. Veuillez réessayer.");
             }

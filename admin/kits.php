@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $file = $_FILES['images']['name'][$key];
                             $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
                             
-                            if (in_array($ext, ['jpg', 'jpeg', 'png'])) {
+                            if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'])) {
                                 $filename = uniqid() . '.' . $ext;
                                 $path = $upload_dir . $filename;
                                 
@@ -507,7 +507,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         <div class="mb-3">
             <label for="images" class="form-label">Ajouter des images</label>
-            <input type="file" class="form-control" id="images" name="images[]" multiple accept="image/*" onchange="previewImages(this)">
+            <input type="file" class="form-control" id="images" name="images[]" multiple accept="image/jpeg,image/png,image/gif,image/webp,image/avif" onchange="previewImages(this)">
             <div id="imagePreview" class="mt-2"></div>
         </div>
         
@@ -523,7 +523,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 const id = this.dataset.id;
                 const image = this.dataset.image;
                 
-                fetch('delete_image.php', {
+                fetch('delete-image.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -594,7 +594,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 <div class="mb-3">
                     <label for="images" class="form-label">Images</label>
-                    <input type="file" class="form-control" id="images" name="images[]" multiple accept="image/*" onchange="previewImages(this)">
+                    <input type="file" class="form-control" id="images" name="images[]" multiple accept="image/jpeg,image/png,image/gif,image/webp,image/avif" onchange="previewImages(this)">
                     <div id="imagePreview" class="mt-2"></div>
                 </div>
                 

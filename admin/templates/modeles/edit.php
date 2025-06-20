@@ -102,7 +102,7 @@ $modele_edit['statuts'] = $modele_edit['statuts'] ? explode(',', $modele_edit['s
 
                 <div class="mb-3">
                     <label for="images" class="form-label">Ajouter des images</label>
-                    <input type="file" class="form-control" id="images" name="images[]" multiple accept="image/*" onchange="previewImages(this)">
+                    <input type="file" class="form-control" id="images" name="images[]" multiple accept="image/jpeg,image/png,image/gif,image/webp,image/avif" onchange="previewImages(this)">
                     <div id="imagePreview" class="mt-2"></div>
                 </div>
 
@@ -122,12 +122,12 @@ $modele_edit['statuts'] = $modele_edit['statuts'] ? explode(',', $modele_edit['s
 <script>
 function deleteImage(image_path) {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) {
-        fetch('delete_image.php', {
+        fetch('delete-image.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: 'image_path=' + encodeURIComponent(image_path)
+            body: 'id=<?php echo $modele_edit['id']; ?>&image=' + encodeURIComponent(image_path) + '&type=modele'
         })
         .then(response => response.json())
         .then(data => {
